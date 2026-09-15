@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
@@ -65,7 +66,7 @@ vulkan_instance_extension_properties_get(VkExtensionProperties **properties) {
 }
 
 t_result
-vulkan_instance_create(const VkInstance *instance) {
+vulkan_instance_create(const VkInstance instance) {
     VkApplicationInfo app_info = {0};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pApplicationName = "Hello Triangle";
@@ -93,7 +94,7 @@ vulkan_instance_create(const VkInstance *instance) {
 
 t_result
 window_init(
-    const GLFWwindow **window,
+    GLFWwindow **window,
     const uint32_t width,
     const uint32_t height,
     const char *title
@@ -127,23 +128,60 @@ window_init(
 }
 
 t_result
-window_destroy(const GLFWwindow **window) {
-    glfwDestroyWindow((GLFWwindow *)*window);
+glfw_window_destroy(GLFWwindow **window) {
+    glfwDestroyWindow(*window);
     *window = nullptr;
+    return SUCCESS;
+}
+
+void
+glfw_destroy(void) {
+    glfwTerminate();
+}
+
+t_result
+vulkan_instance_destroy(VkInstance instance) {
+    vkDestroyInstance(instance, nullptr);
+    return SUCCESS;
+}
+
+t_result
+app_destroy(t_app *app) {
+    APP_CHECK(glfw_window_destroy(&app->window), FAILURE);
+    APP_CHECK(vulkan_instance_destroy(app->vk), FAILURE);
+
+    return SUCCESS;
+}
+
+t_result
+app_window_init(t_app *app, uint32_t width, uint32_t height) {
+    APP_CHECK(window_init(&app->window, width, height, "Test"), FAILURE);
+    return SUCCESS;
+}
+
+t_result
+app_vulkan_init(t_app *app) {
+    APP_CHECK(vulkan_instance_create(app->vk), FAILURE);
+    return SUCCESS;
+}
+
+t_result
+app_init(t_app *app) {
+    memset(app, 0, sizeof(*app));
+    glfwSetErrorCallback(error_cb);
+
     return SUCCESS;
 }
 
 int
 main() {
-    const t_app app = {0};
+    t_app app = {0};
+    uint32_t WIDTH = 800;
+    uint32_t HEIGHT = 600;
 
-    const int32_t WIDTH = 800;
-    const int32_t HEIGHT = 600;
-
-    glfwSetErrorCallback(error_cb);
-
-    APP_CHECK(vulkan_instance_create(&app.vk), FAILURE);
-    APP_CHECK(window_init((const GLFWwindow **)&app.window, WIDTH, HEIGHT, "Test"), FAILURE);
+    APP_CHECK(app_init(&app), FAILURE);
+    APP_CHECK(app_window_init(&app, WIDTH, HEIGHT), FAILURE);
+    APP_CHECK(app_vulkan_init(&app), FAILURE);
 
     while (!glfwWindowShouldClose(app.window)) {
         glfwPollEvents();
@@ -152,8 +190,6 @@ main() {
         }
     }
 
-    window_destroy((const GLFWwindow **)&app.window);
-    glfwTerminate();
-
+    app_destroy(&app);
     return EXIT_SUCCESS;
 }
