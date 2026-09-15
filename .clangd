@@ -1,0 +1,27 @@
+CompileFlags:
+  Compiler: clang
+  Add:
+    - -xc                # treat .h files as C, not C++
+    - -std=c23
+    - -Wall
+    - -Wextra
+    - -Isrc
+    - -I/home/victor-vobis/Projects/scop/glfw/include
+
+Diagnostics:
+  UnusedIncludes: Strict
+  MissingIncludes: Strict
+  ClangTidy:
+    Add: [bugprone-*, performance-*, readability-*]
+    Remove:
+      - readability-magic-numbers
+      - readability-identifier-length
+      - bugprone-easily-swappable-parameters
+
+InlayHints:
+  Enabled: true
+  ParameterNames: true
+  DeducedTypes: true
+
+Hover:
+  ShowAKA: true
