@@ -6,12 +6,14 @@ CompileFlags:
     - -Wall
     - -Wextra
     - -Isrc
-    - -I/home/victor-vobis/Projects/scop/glfw/include
+    - -I/home/victor-vobis/Projects/scop/external/glfw/include
 
 Diagnostics:
   UnusedIncludes: Strict
-  MissingIncludes: Strict
+  MissingIncludes: None
   ClangTidy:
+    CheckOptions:
+      readability-function-cognitive-complexity.IgnoreMacros: true
     Add: [bugprone-*, performance-*, readability-*]
     Remove:
       - readability-magic-numbers
