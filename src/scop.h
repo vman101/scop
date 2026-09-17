@@ -1,3 +1,8 @@
+#pragma once
+#ifndef SCOP_H
+#define SCOP_H
+
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,9 +40,22 @@
 #define QUEUE_NONE UINT32_MAX
 
 typedef struct {
+    void        *data;
+    size_t      member_size;
+    size_t      cap;
+    size_t      size;
+} DynamicArray;
+
+typedef struct {
     uint32_t graphics_family;
     uint32_t present_family;
 } QueueFamilyIndices;
+
+typedef struct {
+    VkSurfaceCapabilitiesKHR    capabilities;
+    DynamicArray                formats;
+    DynamicArray                present_modes;
+} SwapChainSupportDetails;
 
 typedef struct {
     VkInstance                  vk;
@@ -48,14 +66,12 @@ typedef struct {
     VkQueue                     graphics_queue;
     VkQueue                     present_queue;
     VkSurfaceKHR                surface;
+    VkSwapchainKHR              swapchain;
+    DynamicArray                swapchain_images;
+    DynamicArray                swapchain_image_views;
+    VkFormat                    swapchain_image_format;
+    VkExtent2D                  swapchain_extent;
 } App;
-
-typedef struct {
-    uint8_t     *data;
-    size_t      member_size;
-    size_t      cap;
-    size_t      size;
-} DynamicArray;
 
 typedef enum {
     RESULT_OK,
@@ -68,6 +84,8 @@ typedef enum {
 extern uint32_t debug_mode;
 
 void *alloc(uint32_t size);
+
+extern const char *device_extensions[1];
 
 Result da_create(DynamicArray *da, size_t member_size, size_t cap);
 Result da_push(DynamicArray *da, const void *elem);
@@ -89,11 +107,13 @@ Result vulkan_validation_layers_check(const char *validation_layers[], uint32_t 
 Result vulkan_device_pick(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice *device);
 Result vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR surface, VkDevice *device, QueueFamilyIndices *indices_export);
 QueueFamilyIndices vulkan_device_find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface);
+Result vulkan_swapchain_support_query(VkPhysicalDevice device, VkSurfaceKHR surface, SwapChainSupportDetails *details);
+Result vulkan_swapchain_info_create(VkPhysicalDevice device, VkSurfaceKHR surface, uint32_t width, uint32_t height, VkSwapchainCreateInfoKHR *swapchain_info, VkFormat *swapchain_format, VkExtent2D *swapchain_extent);
+
 Result app_create_surface(App *app);
-
-
-
 Result app_window_init(App *app, uint32_t width, uint32_t height);
 Result app_vulkan_init(App *app, const char **validation_layers, uint32_t layers_count);
 Result app_init(App *app);
 void app_destroy(App *app);
+
+#endif

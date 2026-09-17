@@ -65,6 +65,34 @@ app_vulkan_init(App *app, const char **validation_layers, const uint32_t layers_
     vkGetDeviceQueue(app->log_dev, indices.graphics_family, 0, &app->graphics_queue);
     vkGetDeviceQueue(app->log_dev, indices.present_family, 0, &app->present_queue);
 
+    VkSwapchainCreateInfoKHR swapchain_info;
+    int width = 0;
+    int height = 0;
+
+    glfwGetFramebufferSize(app->window, &width, &height);
+    TRY(vulkan_swapchain_info_create(
+        app->device,
+        app->surface,
+        width,
+        height,
+        &swapchain_info,
+        &app->swapchain_image_format,
+        &app->swapchain_extent
+    ));
+    VK_TRY(vkCreateSwapchainKHR(app->log_dev, &swapchain_info, nullptr, &app->swapchain));
+
+    uint32_t image_count = 0;
+    VK_TRY(vkGetSwapchainImagesKHR(app->log_dev, app->swapchain, &image_count, nullptr));
+    TRY(da_create(&app->swapchain_images, sizeof(VkImage), image_count));
+    VK_TRY(vkGetSwapchainImagesKHR(
+        app->log_dev,
+        app->swapchain,
+        &image_count,
+        (VkImage *)app->swapchain_images.data
+    ));
+
+    app->swapchain_images.size = image_count;
+
     return RESULT_OK;
 }
 
@@ -87,6 +115,14 @@ app_init(App *app) {
 void app_destroy(App *app) {
    if (app->mes) {
        vulkan_debug_messenger_destroy(app->vk, app->mes);
+   }
+   if (app->swapchain_image_views.size) {
+       for (size_t i = 0; i < app->swapchain_image_views.size; i++) {
+           vkDestroyImageView(app->log_dev, da_get(&app->swapchain_image_views, i), nullptr);
+       }
+   }
+   if (app->swapchain) {
+       vkDestroySwapchainKHR(app->log_dev, app->swapchain, nullptr);
    }
    if (app->log_dev) {
        vkDestroyDevice(app->log_dev, nullptr);

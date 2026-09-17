@@ -49,9 +49,11 @@ vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR surface,
 
     VkDeviceCreateInfo device_create_info = {0};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.pQueueCreateInfos = (void *)da_queues.data;
+    device_create_info.pQueueCreateInfos = da_queues.data;
     device_create_info.queueCreateInfoCount = da_queues.size;
     device_create_info.pEnabledFeatures = &device_features;
+    device_create_info.enabledExtensionCount = ARRAY_LEN(device_extensions);
+    device_create_info.ppEnabledExtensionNames = device_extensions;
 
     VK_TRY(vkCreateDevice(phys_device, &device_create_info, nullptr, device));
 

@@ -13,7 +13,7 @@ UNAME := $(shell uname)
 
 TARGET := scop
 SRCDIR := src/
-SRC    := $(addprefix $(SRCDIR), main.c vector.c io.c graphics.c app.c logical_device.c physical_device.c surface.c)
+SRC    := $(addprefix $(SRCDIR), main.c vector.c io.c graphics.c app.c logical_device.c physical_device.c surface.c swapchain.c)
 OBJDIR := obj/
 OBJ    := $(SRC:$(SRCDIR)%.c=$(OBJDIR)%.o)
 DEP    := $(OBJ:.o=.d)
