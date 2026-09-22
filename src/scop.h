@@ -39,6 +39,15 @@
 
 #define QUEUE_NONE UINT32_MAX
 
+typedef enum {
+    RESULT_OK,
+    RESULT_ERR_ALLOC,
+    RESULT_ERR_VULKAN,
+    RESULT_ERR_FOPEN,
+    RESULT_ERR_GLFW,
+    COUNT,
+} Result;
+
 typedef struct {
     void        *data;
     size_t      member_size;
@@ -73,21 +82,15 @@ typedef struct {
     VkExtent2D                  swapchain_extent;
 } App;
 
-typedef enum {
-    RESULT_OK,
-    RESULT_ERR_ALLOC,
-    RESULT_ERR_VULKAN,
-    RESULT_ERR_GLFW,
-    COUNT,
-} Result;
-
 extern uint32_t debug_mode;
 
 void *alloc(uint32_t size);
+Result read_file(const char *filename, DynamicArray *da);
 
 extern const char *device_extensions[1];
 
 Result da_create(DynamicArray *da, size_t member_size, size_t cap);
+Result da_create_from(DynamicArray *da, size_t member_size, size_t mem_size, void *mem);
 Result da_push(DynamicArray *da, const void *elem);
 bool da_pop(DynamicArray *da, void *out);
 void *da_get(DynamicArray *da, size_t index);
@@ -109,6 +112,9 @@ Result vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR s
 QueueFamilyIndices vulkan_device_find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface);
 Result vulkan_swapchain_support_query(VkPhysicalDevice device, VkSurfaceKHR surface, SwapChainSupportDetails *details);
 Result vulkan_swapchain_info_create(VkPhysicalDevice device, VkSurfaceKHR surface, uint32_t width, uint32_t height, VkSwapchainCreateInfoKHR *swapchain_info, VkFormat *swapchain_format, VkExtent2D *swapchain_extent);
+
+Result vulkan_graphics_pipeline_create(VkDevice device, VkExtent2D *extend);
+Result vulkan_shader_module_create_from_file(VkDevice device, const char *filename, VkShaderModule module);
 
 Result app_create_surface(App *app);
 Result app_window_init(App *app, uint32_t width, uint32_t height);

@@ -91,6 +91,7 @@ app_vulkan_init(App *app, const char **validation_layers, const uint32_t layers_
         (VkImage *)app->swapchain_images.data
     ));
 
+    TRY(vulkan_graphics_pipeline_create());
     app->swapchain_images.size = image_count;
 
     return RESULT_OK;

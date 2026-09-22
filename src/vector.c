@@ -10,6 +10,14 @@ Result da_create(DynamicArray *da, size_t member_size, size_t cap) {
     return da->data ? RESULT_OK : RESULT_ERR_ALLOC;
 }
 
+Result da_create_from(DynamicArray *da, size_t member_size, size_t mem_size, void *mem) {
+    da->size = mem_size;
+    da->cap = mem_size;
+    da->member_size = member_size;
+    da->data = mem;
+    return RESULT_OK;
+}
+
 Result da_push(DynamicArray *da, const void *elem) {
     if (da->size == da->cap) {
         size_t new_cap = da->cap ? da->cap * 2 : 8;

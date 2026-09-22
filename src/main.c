@@ -10,11 +10,6 @@
 
 const char *device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-void *
-alloc(uint32_t size) {
-    return calloc(1, size);
-}
-
 int main(void) {
    App app = {0};
    Result r = app_init(&app);
