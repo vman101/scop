@@ -8,7 +8,7 @@
     uint32_t debug_mode = 0;
 #endif
 
-const char *device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+const char *device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME };
 
 int main(void) {
    App app = {0};

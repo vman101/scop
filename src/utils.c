@@ -10,7 +10,7 @@ alloc(uint32_t size) {
 
 Result
 read_file(const char *filename, DynamicArray *da) {
-    FILE *shader_source = fopen(filename, "+r");
+    FILE *shader_source = fopen(filename, "rb");
     char *buffer = nullptr;
 
     if (!shader_source) {
@@ -26,7 +26,7 @@ read_file(const char *filename, DynamicArray *da) {
     }
     fseek(shader_source, 0, SEEK_SET);
 
-    const size_t bytes_read = fread(buffer, file_size, file_size, shader_source);
+    const size_t bytes_read = fread(buffer, 1, file_size, shader_source);
     if (bytes_read != file_size) {
         fprintf(stderr, "Error: read invalid amount of bytes: expect %zu got %zu\n", file_size, bytes_read);
     }

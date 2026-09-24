@@ -16,7 +16,8 @@ SRCDIR := src/
 SRC    := $(addprefix $(SRCDIR), main.c \
 			vector.c io.c validation_layers.c app.c \
 			logical_device.c physical_device.c surface.c \
-			swapchain.c graphics_pipeline.c utils.c)
+			swapchain.c graphics_pipeline.c utils.c \
+			render_pass.c shader.c)
 OBJDIR := obj/
 OBJ    := $(SRC:$(SRCDIR)%.c=$(OBJDIR)%.o)
 DEP    := $(OBJ:.o=.d)

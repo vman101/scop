@@ -19,21 +19,21 @@
 #define TRY_EXPECT(call, expect) do { \
     int32_t r_ = (int)(call); \
     if (r_ != (expect)) { \
-        fprintf(stderr, "%s:%5d: %s failed (%d)\n", __FILE__, __LINE__, #call, r_); \
+        fprintf(stderr, "  %s failed (%d)\n    at %s:%d\n", #call, r_, __FILE__, __LINE__); \
         return (r_); \
     } } while (0)
 
 #define VK_TRY(call) do { \
     int32_t r_ = (call); \
     if (r_ != VK_SUCCESS) { \
-        fprintf(stderr, "%s:%5d: %s failed (%d)\n", __FILE__, __LINE__, #call, r_); \
+        fprintf(stderr, "  %s failed (%d)\n    at %s:%d\n", #call, r_, __FILE__, __LINE__); \
         return RESULT_ERR_VULKAN; \
     } } while (0)
 
 #define TRY(call) do { \
     Result r_ = (call); \
     if (r_ != RESULT_OK) { \
-        fprintf(stderr, "%s:%5d: %s failed (%d)\n", __FILE__, __LINE__, #call, r_); \
+        fprintf(stderr, "  %s failed (%d)\n    at %s:%d\n", #call, r_, __FILE__, __LINE__); \
         return (r_); \
     } } while (0)
 
@@ -80,14 +80,16 @@ typedef struct {
     DynamicArray                swapchain_image_views;
     VkFormat                    swapchain_image_format;
     VkExtent2D                  swapchain_extent;
+    VkPipelineLayout            graphics_pipeline_layout;
+    VkPipeline                  graphics_pipeline;
+    VkRenderPass                render_pass;
 } App;
 
 extern uint32_t debug_mode;
+extern const char *device_extensions[2];
 
 void *alloc(uint32_t size);
 Result read_file(const char *filename, DynamicArray *da);
-
-extern const char *device_extensions[1];
 
 Result da_create(DynamicArray *da, size_t member_size, size_t cap);
 Result da_create_from(DynamicArray *da, size_t member_size, size_t mem_size, void *mem);
@@ -113,8 +115,9 @@ QueueFamilyIndices vulkan_device_find_queue_families(VkPhysicalDevice device, Vk
 Result vulkan_swapchain_support_query(VkPhysicalDevice device, VkSurfaceKHR surface, SwapChainSupportDetails *details);
 Result vulkan_swapchain_info_create(VkPhysicalDevice device, VkSurfaceKHR surface, uint32_t width, uint32_t height, VkSwapchainCreateInfoKHR *swapchain_info, VkFormat *swapchain_format, VkExtent2D *swapchain_extent);
 
-Result vulkan_graphics_pipeline_create(VkDevice device, VkExtent2D *extend);
-Result vulkan_shader_module_create_from_file(VkDevice device, const char *filename, VkShaderModule module);
+Result vulkan_graphics_pipeline_create(VkDevice device, VkRenderPass render_pass, VkPipeline *graphics_pipeline, VkPipelineLayout *graphics_pipeline_layout, VkExtent2D *extend);
+Result vulkan_shader_module_create_from_file(VkDevice device, const char *filename, VkShaderModule *module);
+Result vulkan_render_pass_create(VkDevice device, const VkFormat *swap_chain_image_format, VkRenderPass *render_pass);
 
 Result app_create_surface(App *app);
 Result app_window_init(App *app, uint32_t width, uint32_t height);

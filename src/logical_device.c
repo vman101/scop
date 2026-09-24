@@ -46,6 +46,9 @@ vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR surface,
         da_push(&da_queues, &queue_create_info);
     }
 
+    VkPhysicalDeviceVulkan13Features f13 = {0};
+    f13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+    f13.synchronization2 = VK_TRUE;
 
     VkDeviceCreateInfo device_create_info = {0};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -54,6 +57,7 @@ vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR surface,
     device_create_info.pEnabledFeatures = &device_features;
     device_create_info.enabledExtensionCount = ARRAY_LEN(device_extensions);
     device_create_info.ppEnabledExtensionNames = device_extensions;
+    device_create_info.pNext = &f13;
 
     VK_TRY(vkCreateDevice(phys_device, &device_create_info, nullptr, device));
 

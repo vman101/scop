@@ -5,26 +5,46 @@ app_window_init(App *app, uint32_t width, uint32_t height) {
     return window_init(&app->window, width, height, "Test");
 }
 
+void app_vulkan_loader_version_log(void) {
+    uint32_t inst;
+    vkEnumerateInstanceVersion(&inst);
+
+    printf("Vulkan loader version: %u\n", inst);
+}
+
+void app_physical_device_properties_log(App *app) {
+    VkPhysicalDeviceProperties p;
+    vkGetPhysicalDeviceProperties(app->device, &p);       // p.apiVersion is the device version
+
+    printf("GPU vulkan version: %u.%u.%u\n",
+        VK_API_VERSION_MAJOR(p.apiVersion),
+        VK_API_VERSION_MINOR(p.apiVersion),
+        VK_API_VERSION_PATCH(p.apiVersion)
+    );
+}
+
 Result
 app_vulkan_init(App *app, const char **validation_layers, const uint32_t layers_count) {
     VkInstanceCreateInfo create_info = {0};
-    VkApplicationInfo app_info = {0};
+    VkApplicationInfo app_info       = {0};
 
-    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pApplicationName = "Hello Triangle";
+    app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pApplicationName   = "Hello Triangle";
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.pEngineName = "No Engine";
-    app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.apiVersion = VK_API_VERSION_1_0;
+    app_info.pEngineName        = "No Engine";
+    app_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
+    app_info.apiVersion         = VK_API_VERSION_1_3;
 
-    create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    create_info.pApplicationInfo = &app_info;
-    TRY(vulkan_validation_layers_check(validation_layers, layers_count));
-    create_info.enabledLayerCount = layers_count;
+    create_info.sType               = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    create_info.pApplicationInfo    = &app_info;
+    create_info.enabledLayerCount   = layers_count;
     create_info.ppEnabledLayerNames = validation_layers;
+    TRY(vulkan_validation_layers_check(validation_layers, layers_count));
 
     uint32_t glfw_extension_count = 0;
-    const char **glfw_extensions;
+    const char **glfw_extensions  = nullptr;
+
+    app_vulkan_loader_version_log();
 
     glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
 
@@ -44,11 +64,11 @@ app_vulkan_init(App *app, const char **validation_layers, const uint32_t layers_
         create_info.pNext = &debug_mes_info;
     }
 
-    create_info.enabledExtensionCount = da.size;
+    create_info.enabledExtensionCount   = da.size;
     create_info.ppEnabledExtensionNames = (const char **)da.data;
-    create_info.enabledLayerCount = 0;
-    create_info.enabledLayerCount = layers_count;
-    create_info.ppEnabledLayerNames = validation_layers;
+    create_info.enabledLayerCount       = 0;
+    create_info.enabledLayerCount       = layers_count;
+    create_info.ppEnabledLayerNames     = validation_layers;
 
     VK_TRY(vkCreateInstance(&create_info, nullptr, &app->vk));
 
@@ -61,6 +81,8 @@ app_vulkan_init(App *app, const char **validation_layers, const uint32_t layers_
     TRY(vulkan_device_pick(app->vk, app->surface, &app->device));
     QueueFamilyIndices indices;
     TRY(vulkan_logical_device_create(app->device, app->surface, &app->log_dev, &indices));
+
+    app_physical_device_properties_log(app);
 
     vkGetDeviceQueue(app->log_dev, indices.graphics_family, 0, &app->graphics_queue);
     vkGetDeviceQueue(app->log_dev, indices.present_family, 0, &app->present_queue);
@@ -91,7 +113,8 @@ app_vulkan_init(App *app, const char **validation_layers, const uint32_t layers_
         (VkImage *)app->swapchain_images.data
     ));
 
-    TRY(vulkan_graphics_pipeline_create());
+    TRY(vulkan_render_pass_create(app->log_dev, &app->swapchain_image_format, &app->render_pass));
+    TRY(vulkan_graphics_pipeline_create(app->log_dev, app->render_pass, &app->graphics_pipeline, &app->graphics_pipeline_layout, &app->swapchain_extent));
     app->swapchain_images.size = image_count;
 
     return RESULT_OK;
@@ -99,7 +122,7 @@ app_vulkan_init(App *app, const char **validation_layers, const uint32_t layers_
 
 Result
 app_init(App *app) {
-    uint32_t WIDTH = 800;
+    uint32_t WIDTH  = 800;
     uint32_t HEIGHT = 600;
     const char *validation_layers[1] = {
         "VK_LAYER_KHRONOS_validation",
@@ -121,6 +144,15 @@ void app_destroy(App *app) {
        for (size_t i = 0; i < app->swapchain_image_views.size; i++) {
            vkDestroyImageView(app->log_dev, da_get(&app->swapchain_image_views, i), nullptr);
        }
+   }
+   if (app->graphics_pipeline) {
+       vkDestroyPipeline(app->log_dev, app->graphics_pipeline, nullptr);
+   }
+   if (app->graphics_pipeline_layout) {
+       vkDestroyPipelineLayout(app->log_dev, app->graphics_pipeline_layout, nullptr);
+   }
+   if (app->render_pass) {
+       vkDestroyRenderPass(app->log_dev, app->render_pass, nullptr);
    }
    if (app->swapchain) {
        vkDestroySwapchainKHR(app->log_dev, app->swapchain, nullptr);
