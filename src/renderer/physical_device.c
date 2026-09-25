@@ -1,6 +1,8 @@
-#include "scop.h"
+#include "renderer.h"
 #include <stdint.h>
+#include <stdlib.h>
 #include <vulkan/vulkan_core.h>
+#include <string.h>
 
 QueueFamilyIndices
 vulkan_device_find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface) {
@@ -70,8 +72,8 @@ done:
 }
 
 static bool
-swap_chain_adequate(SwapChainSupportDetails *details) {
-    return (bool)(details->present_modes.size > 0 && details->formats.size > 0);
+is_swapchain_adequate(SwapChainSupportDetails *details) {
+    return (bool)(tda_size(&details->present_modes) > 0 && tda_size(&details->formats) > 0);
 }
 
 bool
@@ -85,11 +87,14 @@ vulkan_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
     Result extensions_supported = vulkan_check_device_extension_support(device);
     SwapChainSupportDetails details = {};
     Result swap_chain_res = vulkan_swapchain_support_query(device, surface, &details);
+    const bool swapchain_adequate = is_swapchain_adequate(&details);
+    tda_destroy(&details.formats);
+    tda_destroy(&details.present_modes);
 
 
     return (bool)(indices.graphics_family != QUEUE_NONE
             && indices.present_family != QUEUE_NONE
-            && swap_chain_adequate(&details)
+            && swapchain_adequate
             && extensions_supported == RESULT_OK
             && swap_chain_res == RESULT_OK);
 }
@@ -121,5 +126,6 @@ Result vulkan_device_pick(VkInstance instance, VkSurfaceKHR surface, VkPhysicalD
         return RESULT_ERR_VULKAN;
     }
 
+    free((void *)device_list);
     return RESULT_OK;
 }

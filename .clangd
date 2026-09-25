@@ -5,7 +5,7 @@ CompileFlags:
     - -std=c23
     - -Wall
     - -Wextra
-    - -Isrc
+    - -I/home/victor-vobis/Projects/scop/src
     - -I/home/victor-vobis/Projects/scop/external/glfw/include
 
 Diagnostics:

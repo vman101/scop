@@ -1,4 +1,8 @@
-#include "scop.h"
+#include "GLFW/glfw3.h"
+#include "core/core.h"
+#include <stdlib.h>
+#include <renderer/renderer.h>
+#include <core/vertex.h>
 
 #define DEBUG_MODE
 
@@ -8,11 +12,29 @@
     uint32_t debug_mode = 0;
 #endif
 
-const char *device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME };
+const char *device_extensions[] = {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
+};
+
+const Vertex vertices[] = {
+    {{ 0.0F, -0.5F }, {1.0F, 0.0F, 0.0F}},
+    {{ 0.5F, -0.5F }, {0.0F, 1.0F, 0.0F}},
+    {{ -0.5F, 0.5F }, {0.0F, 0.0F, 1.0F}},
+};
 
 int main(void) {
-   App app = {0};
-   Result r = app_init(&app);
-   app_destroy(&app);
+   Renderer renderer = {0};
+   Result r = renderer_init(&renderer);
+
+   while (!glfwWindowShouldClose(renderer.window)) {
+       glfwPollEvents();
+       if (glfwGetKey(renderer.window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+           glfwSetWindowShouldClose(renderer.window, GLFW_TRUE);
+       }
+       renderer_draw_frame(&renderer);
+   }
+
+   renderer_destroy(&renderer);
    return r == RESULT_OK ? EXIT_SUCCESS : EXIT_FAILURE;
 }

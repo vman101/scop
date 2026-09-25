@@ -1,4 +1,5 @@
-#include "scop.h"
+#include <core/core.h>
+#include <GLFW/glfw3.h>
 
 static void
 error_cb(int code, const char *desc) {
@@ -19,8 +20,7 @@ window_init(
         return RESULT_ERR_GLFW;
     }
     printf("%s\n", glfwGetVersionString());
-    printf("platform: %s\n",
-          glfwGetPlatform() == GLFW_PLATFORM_X11 ? "X11" : "Wayland");
+    printf("platform: %s\n", glfwGetPlatform() == GLFW_PLATFORM_X11 ? "X11" : "Wayland");
 
     if (!glfwVulkanSupported()) {
         fprintf(stderr, "Vulkan not supported\n");

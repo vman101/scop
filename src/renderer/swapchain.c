@@ -1,13 +1,14 @@
-#include "scop.h"
 #include <limits.h>
 #include <stdint.h>
 #include <vulkan/vulkan_core.h>
+#include <renderer/renderer.h>
 
 VkSurfaceFormatKHR
 vulkan_swapchain_surface_format_choose(SwapChainSupportDetails *details) {
-    assert(details->formats.size > 0);
-    for (size_t i = 0; i < details->formats.size; i++) {
-        VkSurfaceFormatKHR *surfaceFormat = da_get(&details->formats, i);
+    const size_t formats_size = tda_size(&details->formats);
+    assert(formats_size > 0);
+    for (size_t i = 0; i < formats_size; i++) {
+        VkSurfaceFormatKHR *surfaceFormat = tda_at(&details->formats, i);
         if (surfaceFormat->format == VK_FORMAT_B8G8R8A8_SRGB
             && surfaceFormat->colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
         ) {
@@ -15,39 +16,21 @@ vulkan_swapchain_surface_format_choose(SwapChainSupportDetails *details) {
         }
     }
 
-    return *(VkSurfaceFormatKHR *)da_get(&details->formats, 0);
+    return *tda_at(&details->formats, 0);
 }
 
 VkPresentModeKHR
 vulkan_swapchain_present_mode_choose(SwapChainSupportDetails *details) {
-    for (size_t i = 0; i < details->present_modes.size; i++) {
-        VkPresentModeKHR *presentMode = (VkPresentModeKHR *)da_get(&details->present_modes, i);
+    const size_t present_modes_size = tda_size(&details->present_modes);
+    assert(present_modes_size > 0);
+    for (size_t i = 0; i < present_modes_size; i++) {
+        VkPresentModeKHR *presentMode = tda_at(&details->present_modes, i);
         if (*presentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
             return *presentMode;
         }
     }
 
     return VK_PRESENT_MODE_FIFO_KHR;
-}
-
-int32_t clamp(int32_t n, int32_t min, int32_t max) {
-    if (n < min) {
-        return min;
-    }
-    if (n > max) {
-        return max;
-    }
-    return n;
-}
-
-uint32_t uclamp(uint32_t n, uint32_t min, uint32_t max) {
-    if (n < min) {
-        return min;
-    }
-    if (n > max) {
-        return max;
-    }
-    return n;
 }
 
 VkExtent2D vulkan_swapchain_extend_choose(SwapChainSupportDetails *details, uint32_t width, uint32_t height) {
@@ -77,15 +60,15 @@ vulkan_swapchain_support_query(VkPhysicalDevice device, VkSurfaceKHR surface, Sw
 
     uint32_t format_count = 0;
     VK_TRY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, nullptr));
-    TRY(da_create(&details->formats, sizeof(VkSurfaceFormatKHR), format_count));
-    VK_TRY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, details->formats.data));
-    details->formats.size = format_count;
+    TRY(tda_create(&details->formats, format_count));
+    VK_TRY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, tda_data(&details->formats)));
+    tda_size(&details->formats) = format_count;
 
     uint32_t present_mode_count = 0;
     VK_TRY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, nullptr));
-    TRY(da_create(&details->present_modes, sizeof(VkPresentModeKHR), present_mode_count));
-    VK_TRY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, details->present_modes.data));
-    details->present_modes.size = present_mode_count;
+    TRY(tda_create(&details->present_modes, present_mode_count));
+    VK_TRY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, tda_data(&details->present_modes)));
+    tda_size(&details->present_modes) = present_mode_count;
 
     return RESULT_OK;
 }
@@ -142,19 +125,22 @@ vulkan_swapchain_info_create(
     *swapchain_format = format.format;
     *swapchain_extent = extent;
 
+    tda_destroy(&details.present_modes);
+    tda_destroy(&details.formats);
+
     return RESULT_OK;
 }
 
 Result
 vulkan_swapchain_image_view_create(
-    VkImageView *image_view,
     VkDevice log_dev,
     VkImage image,
-    VkFormat format
+    VkFormat format,
+    VkImageView *image_view
 ) {
     VkImageViewCreateInfo create = {0};
 
-    create.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    create.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     create.image = image;
     create.viewType = VK_IMAGE_VIEW_TYPE_2D;
     create.format = format;
@@ -166,9 +152,21 @@ vulkan_swapchain_image_view_create(
     create.subresourceRange.baseMipLevel = 0;
     create.subresourceRange.levelCount = 1;
     create.subresourceRange.baseArrayLayer = 0;
-    create.subresourceRange.layerCount = 0;
+    create.subresourceRange.layerCount = 1;
 
     VK_TRY(vkCreateImageView(log_dev, &create, nullptr, image_view));
 
+    return RESULT_OK;
+}
+
+Result
+vulkan_swapchain_image_views_create_from_image(VkDevice device, VkFormat format, Array(VkImage) *images, Array(VkImageView) *image_views) {
+    TRY(tda_create(image_views, tda_size(images)));
+    for (size_t i = 0; i < tda_size(images); i++) {
+        VkImage image = *tda_at(images, i);
+        VkImageView *image_view = tda_at(image_views, i);
+        TRY(vulkan_swapchain_image_view_create(device, image, format, image_view));
+        tda_size(image_views)++;
+    }
     return RESULT_OK;
 }

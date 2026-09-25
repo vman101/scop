@@ -1,7 +1,29 @@
-#include "scop.h"
 #include <errno.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <core/core.h>
 #include <stdio.h>
 #include <string.h>
+
+int32_t clamp(int32_t n, int32_t min, int32_t max) {
+    if (n < min) {
+        return min;
+    }
+    if (n > max) {
+        return max;
+    }
+    return n;
+}
+
+uint32_t uclamp(uint32_t n, uint32_t min, uint32_t max) {
+    if (n < min) {
+        return min;
+    }
+    if (n > max) {
+        return max;
+    }
+    return n;
+}
 
 void *
 alloc(uint32_t size) {
@@ -9,7 +31,7 @@ alloc(uint32_t size) {
 }
 
 Result
-read_file(const char *filename, DynamicArray *da) {
+read_file(const char *filename, Array(char) *da) {
     FILE *shader_source = fopen(filename, "rb");
     char *buffer = nullptr;
 
@@ -31,7 +53,7 @@ read_file(const char *filename, DynamicArray *da) {
         fprintf(stderr, "Error: read invalid amount of bytes: expect %zu got %zu\n", file_size, bytes_read);
     }
 
-    TRY(da_create_from(da, sizeof(*buffer), file_size, buffer));
+    TRY(tda_from(da, buffer, bytes_read));
 
     fclose(shader_source);
 

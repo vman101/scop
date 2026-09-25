@@ -1,4 +1,6 @@
-#include "scop.h"
+#include "renderer.h"
+#include <stdlib.h>
+#include <string.h>
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

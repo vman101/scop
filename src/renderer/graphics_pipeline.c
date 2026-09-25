@@ -1,15 +1,17 @@
-#include "scop.h"
+#include "renderer.h"
 #include <vulkan/vulkan_core.h>
+#include <string.h>
 
 Result
 vulkan_graphics_pipeline_create(VkDevice device, VkRenderPass render_pass, VkPipeline *graphics_pipeline, VkPipelineLayout *graphics_pipeline_layout, VkExtent2D *extend) {
     VkShaderModule frag_shader = {0};
     VkShaderModule vert_shader = {0};
 
-    TRY(vulkan_shader_module_create_from_file(device, "obj/shader.vert.spv", &vert_shader));
-    TRY(vulkan_shader_module_create_from_file(device, "obj/shader.frag.spv", &frag_shader));
+    TRY(vulkan_shader_module_create_from_file(device, "obj/shaders/shader.vert.spv", &vert_shader));
+    TRY(vulkan_shader_module_create_from_file(device, "obj/shaders/shader.frag.spv", &frag_shader));
 
     VkPipelineShaderStageCreateInfo vert_stage_info;
+    memset(&vert_stage_info, 0, sizeof(vert_stage_info));
     vert_stage_info.sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vert_stage_info.stage               = VK_SHADER_STAGE_VERTEX_BIT;
     vert_stage_info.module              = vert_shader;
@@ -17,19 +19,23 @@ vulkan_graphics_pipeline_create(VkDevice device, VkRenderPass render_pass, VkPip
     vert_stage_info.pSpecializationInfo = nullptr;
 
     VkPipelineShaderStageCreateInfo frag_stage_info;
+    memset(&frag_stage_info, 0, sizeof(frag_stage_info));
     frag_stage_info.sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     frag_stage_info.stage               = VK_SHADER_STAGE_FRAGMENT_BIT;
     frag_stage_info.module              = frag_shader;
     frag_stage_info.pName               = "main";
     frag_stage_info.pSpecializationInfo = nullptr;
 
-    VkPipelineShaderStageCreateInfo shader_stages[] = { vert_stage_info, frag_stage_info };
+    VkVertexInputBindingDescription bind_desc = vulkan_vertex_input_bind_desc_get();
+    VertexAttrDescs attr_desc                 = vulkan_vertex_input_attr_desc_get();
+
+    VkPipelineShaderStageCreateInfo shader_stages[]      = { vert_stage_info, frag_stage_info };
     VkPipelineVertexInputStateCreateInfo vert_input_info = {0};
-    vert_input_info.sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vert_input_info.vertexBindingDescriptionCount   = 0;
-    vert_input_info.pVertexBindingDescriptions      = nullptr;
-    vert_input_info.vertexAttributeDescriptionCount = 0;
-    vert_input_info.pVertexAttributeDescriptions    = nullptr;
+    vert_input_info.sType                                = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vert_input_info.vertexBindingDescriptionCount        = 1;
+    vert_input_info.pVertexBindingDescriptions           = &bind_desc;
+    vert_input_info.vertexAttributeDescriptionCount      = 2;
+    vert_input_info.pVertexAttributeDescriptions         = attr_desc.attrs;
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly = {0};
     input_assembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

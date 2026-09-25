@@ -1,5 +1,6 @@
-#include "scop.h"
 #include <string.h>
+#include <stdlib.h>
+#include <core/core.h>
 
 Result da_create(DynamicArray *da, size_t member_size, size_t cap) {
     *da = (DynamicArray){ .member_size = member_size, .cap = cap };
@@ -15,6 +16,20 @@ Result da_create_from(DynamicArray *da, size_t member_size, size_t mem_size, voi
     da->cap = mem_size;
     da->member_size = member_size;
     da->data = mem;
+    return RESULT_OK;
+}
+
+static Result da_resize(DynamicArray *da, uint32_t factor) {
+    size_t new_cap = da->cap ? da->cap * factor : 8;
+    if (new_cap > SIZE_MAX / da->member_size) {
+        return RESULT_ERR_ALLOC;
+    }
+    uint8_t *new_data = realloc(da->data, new_cap * da->member_size);
+    if (!new_data) {
+        return RESULT_ERR_ALLOC;
+    }
+    da->data = new_data;
+    da->cap = new_cap;
     return RESULT_OK;
 }
 
@@ -59,11 +74,32 @@ void da_remove_index(DynamicArray *da, size_t index) {
     da->size--;
 }
 
+static
+void *da_get_raw(DynamicArray *da, size_t index) {
+    return da->data + (index * da->member_size);
+}
+
 void *da_get(DynamicArray *da, size_t index) {
     if (index >= da->size) {
         return nullptr;
     }
-    return da->data + (index * da->member_size);
+    return da_get_raw(da, index);
+}
+
+void *da_get_mem(DynamicArray *da, size_t index) {
+    if (index >= da->cap) {
+        if (da_resize(da, 2) != RESULT_OK) {
+            return nullptr;
+        }
+    }
+    return da_get_raw(da, index);
+}
+
+void da_set(DynamicArray *da, size_t index, void *mem) {
+    if (index >= da->size) {
+        return;
+    }
+    memmove(da->data + (index * da->member_size), mem, da->member_size);
 }
 
 void da_destroy(DynamicArray *da) {

@@ -1,9 +1,11 @@
-#include "scop.h"
+#include "renderer.h"
 #include <vulkan/vulkan_core.h>
+#include <string.h>
 
 Result
 vulkan_render_pass_create(VkDevice device, const VkFormat *swap_chain_image_format, VkRenderPass *render_pass) {
     VkAttachmentDescription color_attachment;
+    memset(&color_attachment, 0, sizeof(color_attachment));
     color_attachment.format                    = *swap_chain_image_format;
     color_attachment.samples                   = VK_SAMPLE_COUNT_1_BIT;
     color_attachment.loadOp                    = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -12,6 +14,7 @@ vulkan_render_pass_create(VkDevice device, const VkFormat *swap_chain_image_form
     color_attachment.stencilStoreOp            = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     color_attachment.initialLayout             = VK_IMAGE_LAYOUT_UNDEFINED;
     color_attachment.finalLayout               = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    color_attachment.flags                     = 0;
 
     VkAttachmentReference color_attachment_ref = {0};
     color_attachment_ref.attachment            = 0;
@@ -28,6 +31,17 @@ vulkan_render_pass_create(VkDevice device, const VkFormat *swap_chain_image_form
     render_pass_info.pAttachments              = &color_attachment;
     render_pass_info.subpassCount              = 1;
     render_pass_info.pSubpasses                = &subpass;
+
+    VkSubpassDependency dependency = {0};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    render_pass_info.dependencyCount = 1;
+    render_pass_info.pDependencies = &dependency;
 
     VK_TRY(vkCreateRenderPass(device, &render_pass_info, nullptr, render_pass));
 
