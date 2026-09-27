@@ -21,6 +21,7 @@ DECLARE_ARRAY(VkSurfaceFormatKHR);
 DECLARE_ARRAY(VkBuffer);
 DECLARE_ARRAY(VkDeviceSize);
 DECLARE_ARRAY(VkDeviceMemory);
+DECLARE_ARRAY(VkVertexInputAttributeDescription);
 
 #define QUEUE_NONE UINT32_MAX
 
@@ -57,7 +58,6 @@ typedef struct {
 typedef struct {
     VkPipelineLayout            layout;
     VkPipeline                  handle;
-    VkRenderPass                render_pass;
 } GraphicsPipeline;
 
 typedef struct {
@@ -119,7 +119,17 @@ Result vulkan_swapchain_image_views_create_from_image(VkDevice device, VkFormat 
 
 /* GRAPHICS_PIPELINE */
 
-Result vulkan_graphics_pipeline_create(VkDevice device, VkRenderPass render_pass, VkExtent2D extent, VkPipelineLayout *graphics_pipeline_layout, VkPipeline *graphics_pipeline);
+Result vulkan_graphics_pipeline_create(
+    VkDevice device,
+    VkRenderPass render_pass,
+    VkVertexInputBindingDescription vertex_binding_desc[], uint32_t vertex_binding_desc_count,
+    VkVertexInputAttributeDescription vertex_attr_desc[],
+    uint32_t vertex_attr_desc_count,
+    VkShaderModule vertex_shader,
+    VkShaderModule fragment_shader,
+    VkPipelineLayout graphics_pipeline_layout,
+    VkPipeline *graphics_pipeline
+);
 Result vulkan_shader_module_create_from_file(VkDevice device, const char *filename, VkShaderModule *module);
 Result vulkan_render_pass_create(VkDevice device, const VkFormat *swap_chain_image_format, VkRenderPass *render_pass);
 Result vulkan_framebuffers_create(VkDevice device, VkRenderPass render_pass, VkExtent2D extent, Array(VkImageView) *image_views, Array(VkFramebuffer) *fbs);
@@ -150,8 +160,6 @@ Result vulkan_memory_fill(VkDevice device, VkDeviceMemory device_memory, size_t 
 
 /* BUFFER */
 Result vulkan_buffer_memory_bind(VkDevice device, VkBuffer buffer, VkDeviceMemory device_memory);
-VkVertexInputBindingDescription vulkan_vertex_input_bind_desc_get();
-VertexAttrDescs vulkan_vertex_input_attr_desc_get();
 VkBufferCreateInfo vulkan_buffer_info_vertex_get(size_t vertex_count);
 Result vulkan_vertex_buffer_create(
     VkDevice device,

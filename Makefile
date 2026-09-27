@@ -14,18 +14,18 @@ UNAME := $(shell uname)
 
 TARGET := scop
 SRCDIR := src/
-CORE := vector.c io.c utils.c
+CORE := da.c io.c utils.c
 GFX := gfx.h
-VK := validation_layers.c logical_device.c physical_device.c \
-			render_pass.c shader.c command.c \
-			swapchain.c graphics_pipeline.c \
-			sync.c framebuffer.c vertex.c buffer.c
-RENDERER := renderer.c surface.c draw.c
+VK := 	validation_layers.c logical_device.c \
+		swapchain.c physical_device.c \
+		render_pass.c shader.c command.c \
+		sync.c framebuffer.c vertex.c buffer.c
+RENDERER := renderer.c draw.c
 
 SRC    := 	$(addprefix $(SRCDIR), main.c) \
-			$(addprefix $(SRCDIR)renderer/, $(RENDERER)) \
 			$(addprefix $(SRCDIR)core/, $(CORE)) \
-			$(addprefix $(SRCDIR)/gfx/vk/, $(VK))
+			$(addprefix $(SRCDIR)gfx/gfx_vulkan/, $(VK))
+			# $(addprefix $(SRCDIR)renderer/, $(RENDERER)) \
 
 OBJDIR := obj/
 OBJ    := $(SRC:$(SRCDIR)%.c=$(OBJDIR)%.o)

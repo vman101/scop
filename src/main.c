@@ -1,6 +1,4 @@
 #include "GLFW/glfw3.h"
-#include "core/core.h"
-#include <stdlib.h>
 #include <renderer/renderer.h>
 #include <core/vertex.h>
 
@@ -25,16 +23,12 @@ const Vertex vertices[] = {
 
 int main(void) {
    Renderer renderer = {0};
-   Result r = renderer_init(&renderer);
 
    while (!glfwWindowShouldClose(renderer.window)) {
        glfwPollEvents();
        if (glfwGetKey(renderer.window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
            glfwSetWindowShouldClose(renderer.window, GLFW_TRUE);
        }
-       renderer_draw_frame(&renderer);
    }
-
-   renderer_destroy(&renderer);
-   return r == RESULT_OK ? EXIT_SUCCESS : EXIT_FAILURE;
+   return 0;
 }
