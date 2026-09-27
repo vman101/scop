@@ -45,7 +45,7 @@ uint32_t uclamp(uint32_t n, uint32_t min, uint32_t max);
 
 void da_set(DynamicArray *da, size_t index, void *mem);
 Result da_create(DynamicArray *da, size_t member_size, size_t cap);
-Result da_create_from(DynamicArray *da, size_t member_size, size_t mem_size, void *mem);
+void da_create_from(DynamicArray *da, size_t member_size, size_t mem_size, void *mem);
 Result da_push(DynamicArray *da, const void *elem);
 bool da_pop(DynamicArray *da, void *out);
 void *da_get(DynamicArray *da, size_t index);

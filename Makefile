@@ -19,7 +19,8 @@ GFX := gfx.h
 VK := 	validation_layers.c logical_device.c \
 		swapchain.c physical_device.c \
 		render_pass.c shader.c command.c \
-		sync.c framebuffer.c vertex.c buffer.c
+		sync.c framebuffer.c vertex.c buffer.c \
+		gfx_vulkan.c gfx_vulkan_glfw.c
 RENDERER := renderer.c draw.c
 
 SRC    := 	$(addprefix $(SRCDIR), main.c) \

@@ -1,4 +1,3 @@
-#include "core/core.h"
 #include "vk.h"
 #include <stdint.h>
 #include <string.h>

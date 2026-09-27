@@ -5,7 +5,6 @@
 #define GFX_MAX_BINDINGS    5
 #define GFX_MAX_ATTRIBUTES  5
 
-typedef struct GfxDeviceDesc            GfxDeviceDesc;
 typedef void                            GfxWindow;
 
 typedef struct GfxDevice_T              GfxDevice_T;
@@ -28,6 +27,12 @@ typedef enum {
     GFX_FORMAT_FLOAT4,
     GFX_FORMAT_UBYTE4_NORM,
 } GfxFormat;
+
+typedef struct {
+    GfxWindow   *window;
+    const char  *app_name;
+    bool        debug_mode;
+} GfxDeviceDesc;
 
 typedef struct {
     uint32_t  location;
@@ -54,8 +59,15 @@ typedef struct {
     GfxVertexLayout  vertex_layout;
 } GfxPipelineDesc;
 
+typedef struct {
+    GfxBufferUsage usage;
+    GfxMemoryKind mem;
+    size_t size;
+    const void *data;
+} GfxBufferDesc;
+
 Result gfx_device_create(GfxDeviceDesc *dev_info, GfxDevice *dev);
-Result gfx_buffer_create(GfxDevice dev, GfxBufferUsage usage, GfxMemoryKind mem, size_t size, const void *data, GfxBuffer *out);
+Result gfx_buffer_create(GfxDevice dev, GfxBufferDesc *desc, GfxBuffer *out);
 Result gfx_pipeline_create(GfxDevice dev, GfxPipelineDesc *desc);
 void gfx_device_destroy(GfxDevice dev);
 

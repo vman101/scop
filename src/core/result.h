@@ -31,3 +31,10 @@ typedef enum {
         return (r_); \
     } } while (0)
 
+
+#define TRY_GOTO(r, label, call) do { \
+    (r) = (int)(call); \
+    if ((r) != RESULT_OK) { \
+        fprintf(stderr, "  %s failed (%d)\n    at %s:%d\n", #call, (r), __FILE__, __LINE__); \
+        goto label; \
+    } } while (0)

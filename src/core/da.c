@@ -11,12 +11,11 @@ Result da_create(DynamicArray *da, size_t member_size, size_t cap) {
     return da->data ? RESULT_OK : RESULT_ERR_ALLOC;
 }
 
-Result da_create_from(DynamicArray *da, size_t member_size, size_t mem_size, void *mem) {
+void da_create_from(DynamicArray *da, size_t member_size, size_t mem_size, void *mem) {
     da->size = mem_size;
     da->cap = mem_size;
     da->member_size = member_size;
     da->data = mem;
-    return RESULT_OK;
 }
 
 static Result da_resize(DynamicArray *da, uint32_t factor) {

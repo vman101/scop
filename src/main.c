@@ -1,6 +1,8 @@
 #include "GLFW/glfw3.h"
+#include "gfx/gfx.h"
 #include <renderer/renderer.h>
 #include <core/vertex.h>
+#include <stddef.h>
 
 #define DEBUG_MODE
 
@@ -22,13 +24,47 @@ const Vertex vertices[] = {
 };
 
 int main(void) {
-   Renderer renderer = {0};
+    GfxDevice dev;
+    GLFWwindow *window;
 
-   while (!glfwWindowShouldClose(renderer.window)) {
-       glfwPollEvents();
-       if (glfwGetKey(renderer.window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-           glfwSetWindowShouldClose(renderer.window, GLFW_TRUE);
-       }
-   }
-   return 0;
+    TRY(window_init(&window, 600, 600, "Test"));
+
+    GfxDeviceDesc dev_desc = {
+        .window = window,
+        .app_name = "name",
+        .debug_mode = true
+    };
+    TRY(gfx_device_create(&dev_desc, &dev));
+
+    GfxVertexLayout vertex_layout = {
+         .bindings = {
+            {
+                .stride = sizeof(*vertices),
+                .attributes = {
+                    { .location = 0, .format = GFX_FORMAT_FLOAT2, .offset = offsetof(Vertex, pos) },
+                    { .location = 1, .format = GFX_FORMAT_FLOAT3, .offset = offsetof(Vertex, color) },
+                },
+                .attribute_count = 2
+            }
+        },
+        .binding_count = 1
+    };
+
+    GfxPipelineDesc pipeline_desc = {
+        .depth_test = false,
+        vertex_layout,
+    };
+
+    TRY(gfx_pipeline_create(dev, &pipeline_desc));
+
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
+        printf("der loopler\n");
+    }
+
+    gfx_device_destroy(dev);
+    return 0;
 }

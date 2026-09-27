@@ -1,7 +1,9 @@
 #include <gfx/gfx.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
+#include "core/result.h"
 #include "vk.h"
 
 struct GfxDevice_T {
@@ -12,6 +14,7 @@ struct GfxDevice_T {
     FrameData                   frames;
     VkCommandPool               command_pool;
     VkRenderPass                render_pass;
+    MemoryPool                  vertex_buffers;
 };
 
 DECLARE_ARRAY(GfxVertexLayout_T);
@@ -34,12 +37,6 @@ void gfx_graphics_loader_version_log(void) {
     vkEnumerateInstanceVersion(&inst);
     printf("Vulkan loader version: %u\n", inst);
 }
-
-struct GfxDeviceDesc {
-    GfxWindow   *window;
-    const char  *app_name;
-    bool        debug_mode;
-};
 
 void gfx_graphics_api_info_log(GfxDevice_T *dev) {
     VkPhysicalDeviceProperties p;
@@ -69,7 +66,7 @@ static VkFormat gfx_format_to_vk(GfxFormat f) {
 }
 
 Result
-gfx_pipeline_create(GfxDevice dev, GfxPipelineDesc *desc) {
+gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc) {
     VkShaderModule vert_shader;
     VkShaderModule frag_shader;
 
@@ -87,7 +84,7 @@ gfx_pipeline_create(GfxDevice dev, GfxPipelineDesc *desc) {
             .stride = binding->stride,
             .inputRate = binding->per_instance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX,
         };
-        for (size_t j = 0; j < binding->attribute_count; i++) {
+        for (size_t j = 0; j < binding->attribute_count; j++) {
             GfxVertexAttribute *attr = &binding->attributes[j];
             attr_desc[attr_count++] = (VkVertexInputAttributeDescription) {
                 .binding = i,
@@ -222,7 +219,44 @@ gfx_pipeline_create(GfxDevice dev, GfxPipelineDesc *desc) {
 }
 
 Result
-vulkan_context_init(VkContext *ctx, VkContextCreateInfo *ctx_info) {
+vulkan_swapchain_init(GfxDevice_T *dev, GfxWindow *window) {
+    VkSwapchainCreateInfoKHR swapchain_info;
+    int32_t width = 0;
+    int32_t height = 0;
+    Swapchain *swapchain    = &dev->swapchain;
+    VkContext *ctx          = &dev->ctx;
+
+    vulkan_platform_framebuffer_size_get(window, &width, &height);
+    TRY(vulkan_swapchain_info_create(
+        dev->ctx.physical_device,
+        dev->ctx.surface,
+        width,
+        height,
+        &swapchain_info,
+        &dev->swapchain.image_format,
+        &dev->swapchain.extent
+    ));
+    VK_TRY(vkCreateSwapchainKHR(ctx->logical_device, &swapchain_info, nullptr, &swapchain->handle));
+
+    uint32_t image_count = 0;
+    VK_TRY(vkGetSwapchainImagesKHR(ctx->logical_device, swapchain->handle, &image_count, nullptr));
+    TRY(tda_create(&swapchain->images, image_count));
+    VK_TRY(vkGetSwapchainImagesKHR(
+        ctx->logical_device,
+        swapchain->handle,
+        &image_count,
+        tda_data(&swapchain->images)
+    ));
+    tda_size(&swapchain->images) = image_count;
+
+    TRY(vulkan_swapchain_image_views_create_from_image(ctx->logical_device, swapchain->image_format, &swapchain->images, &swapchain->image_views));
+
+    return RESULT_OK;
+}
+
+Result
+vulkan_context_init(GfxDevice_T *dev, VkContextCreateInfo *ctx_info) {
+    VkContext *ctx = &dev->ctx;
     VkInstanceCreateInfo create_info    = {0};
     VkApplicationInfo dev_info          = {0};
 
@@ -282,94 +316,111 @@ vulkan_context_init(VkContext *ctx, VkContextCreateInfo *ctx_info) {
 }
 
 Result
-vulkan_swapchain_init(VkContext *ctx, Swapchain *swapchain, VkContextCreateInfo *ctx_info) {
-    VkSwapchainCreateInfoKHR swapchain_info;
-    int32_t width = 0;
-    int32_t height = 0;
-
-    vulkan_platform_framebuffer_size_get(ctx_info->window, &width, &height);
-    TRY(vulkan_swapchain_info_create(
-        ctx->physical_device,
-        ctx->surface,
-        width,
-        height,
-        &swapchain_info,
-        &swapchain->image_format,
-        &swapchain->extent
-    ));
-    VK_TRY(vkCreateSwapchainKHR(ctx->logical_device, &swapchain_info, nullptr, &swapchain->handle));
-
-    uint32_t image_count = 0;
-    VK_TRY(vkGetSwapchainImagesKHR(ctx->logical_device, swapchain->handle, &image_count, nullptr));
-    TRY(tda_create(&swapchain->images, image_count));
-    VK_TRY(vkGetSwapchainImagesKHR(
-        ctx->logical_device,
-        swapchain->handle,
-        &image_count,
-        tda_data(&swapchain->images)
-    ));
-    tda_size(&swapchain->images) = image_count;
-
-    TRY(vulkan_swapchain_image_views_create_from_image(ctx->logical_device, swapchain->image_format, &swapchain->images, &swapchain->image_views));
-
-    return RESULT_OK;
-}
-
-Result
 vulkan_frame_init(VkContext *ctx, FrameData *frame) {
     Array(VkSemaphorePtr) semaphores = {0};
-    TRY(tda_from(&semaphores, (void*)((VkSemaphore*[]){&frame->image_available_semaphore, &frame->render_finished_semaphore}), 2));
+    tda_from(&semaphores, (void*)((VkSemaphore*[]){&frame->image_available_semaphore, &frame->render_finished_semaphore}), 2);
     Array(VkFencePtr) fences = {0};
-    TRY(tda_from(&fences, (void *)(VkFence*[]){&frame->in_flight_fence}, 1));
+    tda_from(&fences, (void *)(VkFence*[]){&frame->in_flight_fence}, 1);
     TRY(vulkan_sync_objects_create(ctx->logical_device, &semaphores, &fences));
 
     return RESULT_OK;
 }
 
 void
-gfx_device_destroy(GfxDevice dev) {
-    vkDeviceWaitIdle(dev->ctx.logical_device);
-    vulkan_debug_messenger_destroy(dev->ctx.instance, dev->ctx.messenger);
+gfx_device_destroy(GfxDevice_T *dev) {
+    VkContext *ctx = &dev->ctx;
+    vkDeviceWaitIdle(ctx->logical_device);
+    vulkan_debug_messenger_destroy(ctx->instance, ctx->messenger);
     // vkDestroySemaphore(dev->ctx.logical_device, dev->image_available_semaphore, nullptr);
     // vkDestroySemaphore(dev->ctx.logical_device, dev->render_finished_semaphore, nullptr);
     // vkDestroyFence(dev->ctx.logical_device, dev->in_flight_fence, nullptr);
-    vkDestroyCommandPool(dev->ctx.logical_device, dev->command_pool, nullptr);
+    vkDestroyCommandPool(ctx->logical_device, dev->command_pool, nullptr);
     // for (size_T i = 0; i < tda_size(&dev->buffers); i++) {
     //     vkDestroyBuffer(dev->ctx.logical_device, *tda_at(&dev->buffers, i), nullptr);
     // }
     for (size_t i = 0; i < tda_size(&dev->device_memory); i++) {
-        vkFreeMemory(dev->ctx.logical_device, *tda_at(&dev->device_memory, i), nullptr);
+        vkFreeMemory(ctx->logical_device, *tda_at(&dev->device_memory, i), nullptr);
     }
     for (size_t i = 0; i < tda_size(&dev->swapchain.framebuffers); i++) {
-        vkDestroyFramebuffer(dev->ctx.logical_device, *tda_at(&dev->swapchain.framebuffers, i), nullptr);
+        vkDestroyFramebuffer(ctx->logical_device, *tda_at(&dev->swapchain.framebuffers, i), nullptr);
     }
     for (size_t i = 0; i < tda_size(&dev->swapchain.image_views); i++) {
-        vkDestroyImageView(dev->ctx.logical_device, *tda_at(&dev->swapchain.image_views, i), nullptr);
+        vkDestroyImageView(ctx->logical_device, *tda_at(&dev->swapchain.image_views, i), nullptr);
     }
     // tda_destroy(&dev->buffers);
     tda_destroy(&dev->swapchain.framebuffers)
     tda_destroy(&dev->swapchain.image_views);
     tda_destroy(&dev->swapchain.images);
-    vkDestroyPipeline(dev->ctx.logical_device, dev->graphics_pipeline.handle, nullptr);
-    vkDestroyPipelineLayout(dev->ctx.logical_device, dev->graphics_pipeline.layout, nullptr);
-    vkDestroyRenderPass(dev->ctx.logical_device, dev->render_pass, nullptr);
-    vkDestroySwapchainKHR(dev->ctx.logical_device, dev->swapchain.handle, nullptr);
-    vkDestroyDevice(dev->ctx.logical_device, nullptr);
-    vkDestroySurfaceKHR(dev->ctx.instance, dev->ctx.surface, nullptr);
-    vkDestroyInstance(dev->ctx.instance, nullptr);
+    vkDestroyPipeline(ctx->logical_device, dev->graphics_pipeline.handle, nullptr);
+    vkDestroyPipelineLayout(ctx->logical_device, dev->graphics_pipeline.layout, nullptr);
+    vkDestroyRenderPass(ctx->logical_device, dev->render_pass, nullptr);
+    vkDestroySwapchainKHR(ctx->logical_device, dev->swapchain.handle, nullptr);
+    vkDestroyDevice(ctx->logical_device, nullptr);
+    vkDestroySurfaceKHR(ctx->instance, ctx->surface, nullptr);
+    vkDestroyInstance(ctx->instance, nullptr);
 }
 
 Result
-gfx_device_create(GfxDeviceDesc *dev_info, GfxDevice *device) {
-    GfxDevice_T *dev = *device;
+gfx_device_create(GfxDeviceDesc *dev_info, GfxDevice_T **device) {
+    Result r = RESULT_OK;
+    assert(device != nullptr);
+    assert(*device == nullptr);
+    assert(dev_info != nullptr);
+
+    GfxDevice_T *dev = alloc(sizeof(*dev));
+    *device = dev;
+
     VkContextCreateInfo ctx_info = {
         .window = dev_info->window,
     };
-    TRY(vulkan_context_init(&dev->ctx, &ctx_info));
-    TRY(vulkan_render_pass_create(dev->ctx.logical_device, &dev->swapchain.image_format, &dev->render_pass));
-    TRY(vulkan_framebuffers_create(dev->ctx.logical_device, dev->render_pass, dev->swapchain.extent, &dev->swapchain.image_views, &dev->swapchain.framebuffers));
+
+    TRY_GOTO(r, fail, vulkan_context_init(dev, &ctx_info));
+    TRY_GOTO(r, fail, vulkan_swapchain_init(dev, ctx_info.window));
+    TRY_GOTO(r, fail, vulkan_render_pass_create(dev->ctx.logical_device, &dev->swapchain.image_format, &dev->render_pass));
+    TRY_GOTO(r, fail, vulkan_framebuffers_create(dev->ctx.logical_device, dev->render_pass, dev->swapchain.extent, &dev->swapchain.image_views, &dev->swapchain.framebuffers));
     QueueFamilyIndices indices = vulkan_device_find_queue_families(dev->ctx.physical_device, dev->ctx.surface);
     TRY(vulkan_command_pool_create(dev->ctx.logical_device, indices.graphics_family, &dev->command_pool));
-
     return RESULT_OK;
+
+fail:
+    gfx_device_destroy(dev);
+    return r;
+}
+
+struct GfxBuffer_T {
+    VkBuffer        handle;
+    size_t          size;
+    GfxBufferUsage  usage;
+};
+
+Result
+gfx_device_memory_request(GfxDevice dev) {
+
+}
+
+Result gfx_buffer_create(GfxDevice dev, GfxBufferDesc *desc, GfxBuffer *out) {
+    Result r = RESULT_OK;
+
+    GfxBuffer_T *gfx_buffer = alloc(sizeof(*gfx_buffer));
+    gfx_buffer->size = desc->size;
+    gfx_buffer->usage = desc->usage;
+
+    VkBufferCreateInfo buffer_info = {0};
+    buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_info.size = desc->size;
+    buffer_info.usage = desc->usage;
+
+    VkBuffer buf = {0};
+
+    TRY_GOTO(r, fail, vulkan_buffer_create(dev->ctx.logical_device, &buffer_info, &buf));
+    VkMemoryRequirements mem_req = vulkan_buffer_memory_requirements_get(dev->ctx.logical_device, buf);
+
+    TRY_GOTO(r, fail, vulkan_memory_allocate(dev->ctx.logical_device, dev->ctx.physical_device, mem_req, device_memory));
+
+    *out = gfx_buffer;
+    return RESULT_OK;
+
+fail:
+    free(gfx_buffer);
+    return r;
 }

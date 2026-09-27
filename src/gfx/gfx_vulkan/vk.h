@@ -169,3 +169,5 @@ Result vulkan_vertex_buffer_create(
     VkBuffer *buffer
 );
 Result vulkan_buffer_memory_fill(VkDevice device, VkDeviceMemory device_memory, size_t buffer_size, Array(uint32_t) *data);
+Result vulkan_buffer_create(VkDevice device, VkBufferCreateInfo *buffer_info, VkBuffer *buffer);
+VkMemoryRequirements vulkan_buffer_memory_requirements_get(VkDevice device, VkBuffer buffer);
