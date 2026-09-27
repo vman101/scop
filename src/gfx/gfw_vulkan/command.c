@@ -1,13 +1,14 @@
-#include "renderer.h"
+#include "vk.h"
+#include <stdint.h>
 #include <vulkan/vulkan_core.h>
 
 Result
-vulkan_command_pool_create(VkDevice device, VkCommandPool *command_pool, QueueFamilyIndices *queue_indices) {
+vulkan_command_pool_create(VkDevice device, uint32_t family_index, VkCommandPool *command_pool) {
     VkCommandPoolCreateInfo pool_info = {0};
 
     pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    pool_info.queueFamilyIndex = queue_indices->graphics_family;
+    pool_info.queueFamilyIndex = family_index;
 
     VK_TRY(vkCreateCommandPool(device, &pool_info, nullptr, command_pool));
 

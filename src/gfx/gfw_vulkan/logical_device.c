@@ -1,4 +1,4 @@
-#include "renderer.h"
+#include "vk.h"
 #include <stdint.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
@@ -18,7 +18,7 @@ dedupe_array(DynamicArray *da) {
 }
 
 Result
-vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR surface, VkDevice *device, QueueFamilyIndices *indices_export) {
+vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR surface, VkDevice *device) {
     QueueFamilyIndices indices = vulkan_device_find_queue_families(phys_device, surface);
     VkPhysicalDeviceFeatures device_features = {0};
     float queue_priority = 1.0F;
@@ -63,8 +63,6 @@ vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR surface,
 
     da_destroy(&da_families);
     da_destroy(&da_queues);
-
-    *indices_export = indices;
 
     return RESULT_OK;
 }

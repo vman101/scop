@@ -1,13 +1,13 @@
-#include "scop.h"
+#include "vk.h"
 #include <vulkan/vulkan_core.h>
 
 Result
 vulkan_framebuffers_create(
     VkDevice device,
-    Array(VkFramebuffer) *fbs,
-    Array(VkImageView) *image_views,
     VkRenderPass render_pass,
-    VkExtent2D extent
+    VkExtent2D extent,
+    Array(VkImageView) *image_views,
+    Array(VkFramebuffer) *fbs
 ) {
     TRY(tda_create(fbs, tda_size(image_views)));
 

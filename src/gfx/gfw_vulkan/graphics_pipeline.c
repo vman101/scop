@@ -1,9 +1,9 @@
-#include "renderer.h"
+#include "vk.h"
 #include <vulkan/vulkan_core.h>
 #include <string.h>
 
 Result
-vulkan_graphics_pipeline_create(VkDevice device, VkRenderPass render_pass, VkPipeline *graphics_pipeline, VkPipelineLayout *graphics_pipeline_layout, VkExtent2D *extend) {
+vulkan_graphics_pipeline_create(VkDevice device, VkRenderPass render_pass, VkExtent2D extent, VkPipelineLayout *graphics_pipeline_layout, VkPipeline *graphics_pipeline) {
     VkShaderModule frag_shader = {0};
     VkShaderModule vert_shader = {0};
 
@@ -45,14 +45,14 @@ vulkan_graphics_pipeline_create(VkDevice device, VkRenderPass render_pass, VkPip
     VkViewport viewport = {0};
     viewport.x          = 0.0F;
     viewport.y          = 0.0F;
-    viewport.width      = (float)extend->width;
-    viewport.height     = (float)extend->height;
+    viewport.width      = (float)extent.width;
+    viewport.height     = (float)extent.height;
     viewport.minDepth   = 0.0F;
     viewport.maxDepth   = 1.0F;
 
     VkRect2D scissor = {0};
     scissor.offset   = (VkOffset2D){ 0, 0 };
-    scissor.extent   = *extend;
+    scissor.extent   = extent;
 
     VkPipelineViewportStateCreateInfo viewport_state = {0};
     viewport_state.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -116,7 +116,6 @@ vulkan_graphics_pipeline_create(VkDevice device, VkRenderPass render_pass, VkPip
     pipeline_layout_info.pSetLayouts                = nullptr;
     pipeline_layout_info.pushConstantRangeCount     = 0;
     pipeline_layout_info.pPushConstantRanges        = nullptr;
-
     VK_TRY(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, graphics_pipeline_layout));
 
 
@@ -137,7 +136,6 @@ vulkan_graphics_pipeline_create(VkDevice device, VkRenderPass render_pass, VkPip
     pipeline_info.subpass                      = 0;
     pipeline_info.basePipelineHandle           = VK_NULL_HANDLE;
     pipeline_info.basePipelineIndex            = -1;
-
     VK_TRY(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, graphics_pipeline));
 
     vkDestroyShaderModule(device, vert_shader, nullptr);

@@ -1,7 +1,9 @@
 #include "renderer.h"
+#include "core/core.h"
 #include <vulkan/vulkan.h>
 #include <stdio.h>
 #include <string.h>
+#include <vulkan/vulkan_core.h>
 
 Result
 renderer_window_init(Renderer *renderer, uint32_t width, uint32_t height) {
@@ -17,7 +19,7 @@ void renderer_vulkan_loader_version_log(void) {
 
 void renderer_physical_device_properties_log(Renderer *renderer) {
     VkPhysicalDeviceProperties p;
-    vkGetPhysicalDeviceProperties(renderer->device, &p);       // p.apiVersion is the device version
+    vkGetPhysicalDeviceProperties(renderer->ctx.physical_device, &p);       // p.apiVersion is the device version
 
     printf("GPU vulkan version: %u.%u.%u\n",
         VK_API_VERSION_MAJOR(p.apiVersion),
@@ -27,9 +29,9 @@ void renderer_physical_device_properties_log(Renderer *renderer) {
 }
 
 Result
-renderer_vulkan_init(Renderer *renderer, const char **validation_layers, const uint32_t layers_count) {
-    VkInstanceCreateInfo create_info = {0};
-    VkApplicationInfo renderer_info       = {0};
+gfx_device_create(Renderer *renderer, const char **validation_layers, const uint32_t layers_count) {
+    VkInstanceCreateInfo create_info    = {0};
+    VkApplicationInfo renderer_info     = {0};
 
     renderer_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     renderer_info.pApplicationName   = "Hello Triangle";
@@ -73,22 +75,22 @@ renderer_vulkan_init(Renderer *renderer, const char **validation_layers, const u
     create_info.enabledLayerCount       = layers_count;
     create_info.ppEnabledLayerNames     = validation_layers;
 
-    VK_TRY(vkCreateInstance(&create_info, nullptr, &renderer->vk));
+    VK_TRY(vkCreateInstance(&create_info, nullptr, &renderer->ctx.instance));
 
     if (debug_mode) {
-        TRY(vulkan_debug_messenger_create(renderer->vk, &debug_mes_info, &renderer->mes));
+        TRY(vulkan_debug_messenger_create(renderer->ctx.instance, &debug_mes_info, &renderer->ctx.messenger));
     }
 
     da_destroy(&da);
     TRY(renderer_create_surface(renderer));
-    TRY(vulkan_device_pick(renderer->vk, renderer->surface, &renderer->device));
+    TRY(vulkan_device_pick(renderer->ctx.instance, renderer->ctx.surface, &renderer->ctx.physical_device));
     QueueFamilyIndices indices;
-    TRY(vulkan_logical_device_create(renderer->device, renderer->surface, &renderer->log_dev, &indices));
+    TRY(vulkan_logical_device_create(renderer->ctx.physical_device, renderer->ctx.surface, &renderer->ctx.logical_device, &indices));
 
     renderer_physical_device_properties_log(renderer);
 
-    vkGetDeviceQueue(renderer->log_dev, indices.graphics_family, 0, &renderer->graphics_queue);
-    vkGetDeviceQueue(renderer->log_dev, indices.present_family, 0, &renderer->present_queue);
+    vkGetDeviceQueue(renderer->ctx.logical_device, indices.graphics_family, 0, &renderer->ctx.graphics_queue);
+    vkGetDeviceQueue(renderer->ctx.logical_device, indices.present_family, 0, &renderer->ctx.present_queue);
 
     VkSwapchainCreateInfoKHR swapchain_info;
     int width = 0;
@@ -96,39 +98,38 @@ renderer_vulkan_init(Renderer *renderer, const char **validation_layers, const u
 
     glfwGetFramebufferSize(renderer->window, &width, &height);
     TRY(vulkan_swapchain_info_create(
-        renderer->device,
-        renderer->surface,
+        renderer->ctx.physical_device,
+        renderer->ctx.surface,
         width,
         height,
         &swapchain_info,
-        &renderer->swapchain_image_format,
-        &renderer->swapchain_extent
+        &renderer->swapchain.image_format,
+        &renderer->swapchain.extent
     ));
-    VK_TRY(vkCreateSwapchainKHR(renderer->log_dev, &swapchain_info, nullptr, &renderer->swapchain));
+    VK_TRY(vkCreateSwapchainKHR(renderer->ctx.logical_device, &swapchain_info, nullptr, &renderer->swapchain.handle));
 
     uint32_t image_count = 0;
-    VK_TRY(vkGetSwapchainImagesKHR(renderer->log_dev, renderer->swapchain, &image_count, nullptr));
-    TRY(tda_create(&renderer->swapchain_images, image_count));
+    VK_TRY(vkGetSwapchainImagesKHR(renderer->ctx.logical_device, renderer->swapchain.handle, &image_count, nullptr));
+    TRY(tda_create(&renderer->swapchain.images, image_count));
     VK_TRY(vkGetSwapchainImagesKHR(
-        renderer->log_dev,
-        renderer->swapchain,
+        renderer->ctx.logical_device,
+        renderer->swapchain.handle,
         &image_count,
-        tda_data(&renderer->swapchain_images)
+        tda_data(&renderer->swapchain.images)
     ));
-    tda_size(&renderer->swapchain_images) = image_count;
+    tda_size(&renderer->swapchain.images) = image_count;
 
-    TRY(vulkan_swapchain_image_views_create_from_image(renderer->log_dev, renderer->swapchain_image_format, &renderer->swapchain_images, &renderer->swapchain_image_views));
-    TRY(vulkan_render_pass_create(renderer->log_dev, &renderer->swapchain_image_format, &renderer->render_pass));
-    TRY(vulkan_framebuffers_create(renderer->log_dev, &renderer->framebuffers, &renderer->swapchain_image_views, renderer->render_pass, renderer->swapchain_extent));
-    TRY(vulkan_graphics_pipeline_create(renderer->log_dev, renderer->render_pass, &renderer->graphics_pipeline, &renderer->graphics_pipeline_layout, &renderer->swapchain_extent));
-    TRY(vulkan_command_pool_create(renderer->log_dev, &renderer->command_pool, &indices));
-    TRY(vulkan_command_buffer_create(renderer->log_dev, renderer->command_pool, &renderer->command_buffer));
+    TRY(vulkan_swapchain_image_views_create_from_image(renderer->ctx.logical_device, renderer->swapchain.image_format, &renderer->swapchain.images, &renderer->swapchain.image_views));
+    TRY(vulkan_render_pass_create(renderer->ctx.logical_device, &renderer->swapchain.image_format, &renderer->graphics_pipeline.render_pass));
+    TRY(vulkan_framebuffers_create(renderer->ctx.logical_device, renderer->graphics_pipeline.render_pass, renderer->swapchain.extent, &renderer->swapchain.image_views, &renderer->swapchain.framebuffers));
+    TRY(vulkan_graphics_pipeline_create(renderer->ctx.logical_device, renderer->graphics_pipeline.render_pass, renderer->swapchain.extent, &renderer->graphics_pipeline.layout, &renderer->graphics_pipeline.handle));
+    TRY(vulkan_command_pool_create(renderer->ctx.logical_device, &indices, &renderer->command_pool));
 
     Array(VkSemaphorePtr) semaphores = {0};
-    TRY(tda_from(&semaphores, (void*)((VkSemaphore*[]){&renderer->image_available_semaphore, &renderer->render_finished_semaphore}), 2));
+    TRY(tda_from(&semaphores, (void*)((VkSemaphore*[]){&renderer->frames.image_available_semaphore, &renderer->frames.render_finished_semaphore}), 2));
     Array(VkFencePtr) fences = {0};
-    TRY(tda_from(&fences, (void *)(VkFence*[]){&renderer->in_flight_fence}, 1));
-    TRY(vulkan_sync_objects_create(renderer->log_dev, &semaphores, &fences));
+    TRY(tda_from(&fences, (void *)(VkFence*[]){&renderer->frames.in_flight_fence}, 1));
+    TRY(vulkan_sync_objects_create(renderer->ctx.logical_device, &semaphores, &fences));
 
     return RESULT_OK;
 }
@@ -148,36 +149,3 @@ renderer_init(Renderer *renderer) {
     return RESULT_OK;
 }
 
-void renderer_destroy(Renderer *renderer) {
-    vkDeviceWaitIdle(renderer->log_dev);
-    vulkan_debug_messenger_destroy(renderer->vk, renderer->mes);
-    vkDestroySemaphore(renderer->log_dev, renderer->image_available_semaphore, nullptr);
-    vkDestroySemaphore(renderer->log_dev, renderer->render_finished_semaphore, nullptr);
-    vkDestroyFence(renderer->log_dev, renderer->in_flight_fence, nullptr);
-    vkDestroyCommandPool(renderer->log_dev, renderer->command_pool, nullptr);
-    for (size_t i = 0; i < tda_size(&renderer->buffers); i++) {
-        vkDestroyBuffer(renderer->log_dev, *tda_at(&renderer->buffers, i), nullptr);
-    }
-    for (size_t i = 0; i < tda_size(&renderer->device_memory); i++) {
-        vkFreeMemory(renderer->log_dev, *tda_at(&renderer->device_memory, i), nullptr);
-    }
-    for (size_t i = 0; i < tda_size(&renderer->framebuffers); i++) {
-        vkDestroyFramebuffer(renderer->log_dev, *tda_at(&renderer->framebuffers, i), nullptr);
-    }
-    for (size_t i = 0; i < tda_size(&renderer->swapchain_image_views); i++) {
-        vkDestroyImageView(renderer->log_dev, *tda_at(&renderer->swapchain_image_views, i), nullptr);
-    }
-    tda_destroy(&renderer->buffers);
-    tda_destroy(&renderer->framebuffers)
-    tda_destroy(&renderer->swapchain_image_views);
-    tda_destroy(&renderer->swapchain_images);
-    vkDestroyPipeline(renderer->log_dev, renderer->graphics_pipeline, nullptr);
-    vkDestroyPipelineLayout(renderer->log_dev, renderer->graphics_pipeline_layout, nullptr);
-    vkDestroyRenderPass(renderer->log_dev, renderer->render_pass, nullptr);
-    vkDestroySwapchainKHR(renderer->log_dev, renderer->swapchain, nullptr);
-    vkDestroyDevice(renderer->log_dev, nullptr);
-    vkDestroySurfaceKHR(renderer->vk, renderer->surface, nullptr);
-    vkDestroyInstance(renderer->vk, nullptr);
-    glfwDestroyWindow(renderer->window);
-    glfwTerminate();
-}
