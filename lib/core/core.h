@@ -12,7 +12,6 @@
 
 // NOLINTEND(bugprone-macro-parentheses)
 
-
 #define Array(T) union Array_##T
 
 #define tda_create(a, cap) \
