@@ -23,6 +23,8 @@ VK := 	validation_layers.c logical_device.c \
 RENDERER := renderer.c draw.c
 PLATFORM := platform_glfw.c
 
+ASSET := $(addprefix $(LIB_DIR)asset/, obj_parser.zig)
+
 GFX_VULKAN := gfx_vulkan.c $(addprefix gfx_vulkan_, \
 			  	buffer.c swapchain.c pipeline.c \
 				memory.c platform.c draw.c)
