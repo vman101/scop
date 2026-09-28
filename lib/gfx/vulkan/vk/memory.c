@@ -2,19 +2,20 @@
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 
-static Result
-vulkan_memory_type_find(VkPhysicalDevice physical_device, uint32_t type_filter, VkMemoryPropertyFlags properties, uint32_t *type) {
+Result
+vulkan_memory_type_find(VkPhysicalDevice physical_device, VkMemoryPropertyFlags properties, uint32_t *type) {
     VkPhysicalDeviceMemoryProperties mem_props = {0};
     vkGetPhysicalDeviceMemoryProperties(physical_device, &mem_props);
 
     for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
         if (
-            type_filter & (1 << i)
-            && (mem_props.memoryTypes[i].propertyFlags & properties) == properties
+            (mem_props.memoryTypes[i].propertyFlags & properties) == properties
         ) {
             *type = i;
+            return RESULT_OK;
         }
     }
+
     return RESULT_ERR_VULKAN;
 }
 
@@ -23,7 +24,6 @@ vulkan_memory_allocate(VkDevice device, VkPhysicalDevice physical_device, VkMemo
     uint32_t mem_type_index;
     TRY(vulkan_memory_type_find(
         physical_device,
-        mem_req.memoryTypeBits,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         &mem_type_index
     ));
@@ -38,13 +38,17 @@ vulkan_memory_allocate(VkDevice device, VkPhysicalDevice physical_device, VkMemo
 }
 
 Result
-vulkan_memory_fill(VkDevice device, VkDeviceMemory device_memory, size_t size, Array(uint32_t) *data) {
-    void *memory_map = nullptr;
-
-    VK_TRY(vkMapMemory(device, device_memory, 0, size, 0, &memory_map));
-    memcpy(memory_map, tda_data(data), tda_size(data));
-    vkUnmapMemory(device, device_memory);
-
+vulkan_memory_write(
+    VkDevice device,
+    VkDeviceMemory memory,
+    uint64_t offset,
+    uint64_t size,
+    const void *data
+) {
+    void *mapped = nullptr;
+    VK_TRY(vkMapMemory(device, memory, offset, size, 0, &mapped));
+    memcpy(mapped, data, size);
+    vkUnmapMemory(device, memory);
     return RESULT_OK;
 }
 

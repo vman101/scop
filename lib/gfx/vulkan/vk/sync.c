@@ -19,17 +19,3 @@ vulkan_fence_create(VkDevice device, VkFence *fence) {
     VK_TRY(vkCreateFence(device, &fence_info, nullptr, fence));
     return RESULT_OK;
 }
-
-Result
-vulkan_sync_objects_create(VkDevice device, Array(VkSemaphorePtr) *semaphores, Array(VkFencePtr) *fences) {
-    for (size_t i = 0; i < tda_size(semaphores); i++) {
-        VkSemaphore *sema = *tda_at(semaphores, i);
-        TRY(vulkan_semaphore_create(device, sema));
-    }
-    for (size_t i = 0; i < tda_size(fences); i++) {
-        VkFence *fence = *tda_at(fences, i);
-        TRY(vulkan_fence_create(device, fence));
-    }
-
-    return RESULT_OK;
-}

@@ -1,5 +1,6 @@
 #include <limits.h>
 #include <stdint.h>
+#include <string.h>
 #include <vulkan/vulkan_core.h>
 #include "vk.h"
 
@@ -32,6 +33,17 @@ vulkan_swapchain_present_mode_choose(SwapChainSupportDetails *details) {
 
     return VK_PRESENT_MODE_FIFO_KHR;
 }
+
+Result
+vulkan_swapchain_image_format_query(VkPhysicalDevice device, VkSurfaceKHR surface, VkSurfaceFormatKHR *out) {
+    SwapChainSupportDetails details;
+    TRY(vulkan_swapchain_support_query(device, surface, &details));
+
+    VkSurfaceFormatKHR format = vulkan_swapchain_surface_format_choose(&details);
+    *out = format;
+    return RESULT_OK;
+}
+
 
 VkExtent2D vulkan_swapchain_extend_choose(SwapChainSupportDetails *details, uint32_t width, uint32_t height) {
     if (details->capabilities.currentExtent.width != UINT_MAX) {
@@ -79,6 +91,7 @@ vulkan_swapchain_info_create(
     VkSurfaceKHR surface,
     uint32_t width,
     uint32_t height,
+    QueueFamilyIndices *indices,
     VkSwapchainCreateInfoKHR *swapchain_info,
     VkFormat *swapchain_format,
     VkExtent2D *swapchain_extent
@@ -103,13 +116,11 @@ vulkan_swapchain_info_create(
     swapchain_info->imageExtent = extent;
     swapchain_info->imageArrayLayers = 1;
     swapchain_info->imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    QueueFamilyIndices indices = vulkan_device_find_queue_families(device, surface);
-    uint32_t queue_family_indices[] = { indices.graphics_family, indices.present_family };
 
-    if (indices.graphics_family != indices.present_family) {
+    if (indices->graphics_family != indices->present_family) {
         swapchain_info->imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swapchain_info->queueFamilyIndexCount = 2;
-        swapchain_info->pQueueFamilyIndices = queue_family_indices;
+        swapchain_info->pQueueFamilyIndices = (uint32_t*)indices;
     } else {
         swapchain_info->imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         swapchain_info->queueFamilyIndexCount = 0;

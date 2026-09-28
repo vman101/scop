@@ -7,7 +7,9 @@
 
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define DECLARE_ARRAY(T) union Array_##T { DynamicArray da; T *type_tag; }
-#define DECLARE_ARRAY_NAMED(Name, T) union Array_##Name { DynamicArray da; T *type_tag; }
+#define DECLARE_ARRAY_NAMED(Name, T) \
+    union Array_##Name { DynamicArray da; T *type_tag; }
+
 // NOLINTEND(bugprone-macro-parentheses)
 
 
@@ -15,6 +17,9 @@
 
 #define tda_create(a, cap) \
     da_create(&(a)->da, sizeof(*(a)->type_tag), (cap))
+
+#define tda_push(a, mem) \
+    da_push(&(a)->da, mem)
 
 #define tda_at(a, i) \
     ((typeof((a)->type_tag))da_get_mem(&(a)->da, (i)))
@@ -41,7 +46,6 @@ void *alloc(uint32_t size);
 Result read_file(const char *filename, Array(char) *da);
 int32_t clamp(int32_t n, int32_t min, int32_t max);
 uint32_t uclamp(uint32_t n, uint32_t min, uint32_t max);
-
 
 void da_set(DynamicArray *da, size_t index, void *mem);
 Result da_create(DynamicArray *da, size_t member_size, size_t cap);

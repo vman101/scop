@@ -1,3 +1,4 @@
+#include "core/core.h"
 #include "vk.h"
 #include <stdint.h>
 #include <string.h>
@@ -18,7 +19,7 @@ dedupe_array(DynamicArray *da) {
 }
 
 Result
-vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR surface, VkDevice *device) {
+vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR surface, Array(CharPtr) *dev_extensions_arr, VkDevice *device) {
     QueueFamilyIndices indices = vulkan_device_find_queue_families(phys_device, surface);
     VkPhysicalDeviceFeatures device_features = {0};
     float queue_priority = 1.0F;
@@ -50,12 +51,14 @@ vulkan_logical_device_create(VkPhysicalDevice phys_device, VkSurfaceKHR surface,
     f13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     f13.synchronization2 = VK_TRUE;
 
+    const char **device_extensions = (const char **)tda_data(dev_extensions_arr);
+
     VkDeviceCreateInfo device_create_info = {0};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.pQueueCreateInfos = da_queues.data;
     device_create_info.queueCreateInfoCount = da_queues.size;
     device_create_info.pEnabledFeatures = &device_features;
-    device_create_info.enabledExtensionCount = ARRAY_LEN(device_extensions);
+    device_create_info.enabledExtensionCount = tda_size(dev_extensions_arr);
     device_create_info.ppEnabledExtensionNames = device_extensions;
     device_create_info.pNext = &f13;
 

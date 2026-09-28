@@ -1,3 +1,4 @@
+#include "core/core.h"
 #include "vk.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -34,10 +35,10 @@ vulkan_device_find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface)
     return indices;
 }
 
-Result vulkan_check_device_extension_support(VkPhysicalDevice device) {
-    size_t device_extensions_len = ARRAY_LEN(device_extensions);
+Result vulkan_check_device_extension_support(VkPhysicalDevice device, Array(CharPtr) *device_extensions) {
+    size_t device_extensions_len = tda_size(device_extensions);
     uint32_t count = 0;
-    DynamicArray da = {0};
+    Array(VkExtensionProperties) extentions = {0};
     Result res = RESULT_ERR_VULKAN;
 
     VK_TRY(vkEnumerateDeviceExtensionProperties(device, NULL, &count, NULL));
@@ -46,28 +47,29 @@ Result vulkan_check_device_extension_support(VkPhysicalDevice device) {
         goto done;
     }
 
-    TRY(da_create(&da, sizeof(VkExtensionProperties), count));
-    VK_TRY(vkEnumerateDeviceExtensionProperties(device, NULL, &count, (void *)da.data));
-    da.size = count;
+    TRY(tda_create(&extentions, count));
+    VK_TRY(vkEnumerateDeviceExtensionProperties(device, NULL, &count, (void *)tda_data(&extentions)));
+    tda_size(&extentions) = count;
 
     for (size_t r = 0; r < device_extensions_len; r++) {
+        const char *required = *tda_at(device_extensions, r);
         bool found = false;
-        for (size_t a = 0; a < da.size; a++) {
-            VkExtensionProperties *p = da_get(&da, a);
-            if (strcmp(device_extensions[r], p->extensionName) == 0) {
+        for (uint32_t a = 0; a < count; a++) {
+            VkExtensionProperties *p = tda_at(&extentions, a);
+            if (strcmp(required, p->extensionName) == 0) {
                 found = true;
                 break;
             }
         }
         if (!found) {
-            fprintf(stderr, "Missing device extension: %s\n", device_extensions[r]);
+            fprintf(stderr, "Missing device extension: %s\n", required);
             goto done;
         }
     }
     res = RESULT_OK;
 
 done:
-    da_destroy(&da);
+    tda_destroy(&extentions);
     return res;
 }
 
@@ -77,14 +79,14 @@ is_swapchain_adequate(SwapChainSupportDetails *details) {
 }
 
 bool
-vulkan_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+vulkan_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface, Array(CharPtr) *device_extensions) {
     // VkPhysicalDeviceProperties dev_properties = {0};
     // VkPhysicalDeviceFeatures dev_features = {0};
     // vkGetPhysicalDeviceProperties(device, &dev_properties);
     // vkGetPhysicalDeviceFeatures(device, &dev_features);
 
     QueueFamilyIndices indices = vulkan_device_find_queue_families(device, surface);
-    Result extensions_supported = vulkan_check_device_extension_support(device);
+    Result extensions_supported = vulkan_check_device_extension_support(device, device_extensions);
     SwapChainSupportDetails details = {};
     Result swap_chain_res = vulkan_swapchain_support_query(device, surface, &details);
     const bool swapchain_adequate = is_swapchain_adequate(&details);
@@ -99,7 +101,8 @@ vulkan_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
             && swap_chain_res == RESULT_OK);
 }
 
-Result vulkan_device_pick(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice *device) {
+Result
+vulkan_device_pick(VkInstance instance, VkSurfaceKHR surface, Array(CharPtr) *device_extensions, VkPhysicalDevice *device) {
     uint32_t device_count = 0;
 
     VK_TRY(vkEnumeratePhysicalDevices(instance, &device_count, nullptr));
@@ -115,7 +118,7 @@ Result vulkan_device_pick(VkInstance instance, VkSurfaceKHR surface, VkPhysicalD
     VK_TRY(vkEnumeratePhysicalDevices(instance, &device_count, device_list));
 
     for (uint32_t i = 0; i < device_count; ++i) {
-        if (vulkan_device_suitable(device_list[i], surface)) {
+        if (vulkan_device_suitable(device_list[i], surface, device_extensions)) {
             *device = device_list[i];
             break ;
         }

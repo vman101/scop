@@ -1,11 +1,12 @@
 #pragma once
+#include "core/core.h"
 #include <stdint.h>
 #include <core/result.h>
+#include <core/native_window.h>
+#include <core/array_types.h>
 
 #define GFX_MAX_BINDINGS    5
 #define GFX_MAX_ATTRIBUTES  5
-
-typedef void                            GfxWindow;
 
 typedef struct GfxDevice_T              GfxDevice_T;
 typedef struct GfxBuffer_T              GfxBuffer_T;
@@ -29,12 +30,6 @@ typedef enum {
 } GfxFormat;
 
 typedef struct {
-    GfxWindow   *window;
-    const char  *app_name;
-    bool        debug_mode;
-} GfxDeviceDesc;
-
-typedef struct {
     uint32_t  location;
     GfxFormat format;
     uint32_t  offset;
@@ -53,10 +48,10 @@ typedef struct {
 } GfxVertexLayout;
 
 typedef struct {
-    const char      *vertex_shader_path;
-    const char      *fragment_shader_path;
-    bool             depth_test;
-    GfxVertexLayout  vertex_layout;
+    const char          *vertex_shader_path;
+    const char          *fragment_shader_path;
+    bool                depth_test;
+    GfxVertexLayout     vertex_layout;
 } GfxPipelineDesc;
 
 typedef struct {
@@ -66,12 +61,33 @@ typedef struct {
     const void *data;
 } GfxBufferDesc;
 
+typedef void * GfxPlatform;
+typedef void * GfxInstance;
+typedef void * GfxSurface;
+
+typedef struct {
+    const char          *app_name;
+    CoreNativeWindow    *window;
+    bool                debug_mode;
+    uint32_t            width;
+    uint32_t            height;
+} GfxDeviceDesc;
+
+void gfx_resize(GfxDevice dev, int32_t width, int32_t height);
+
 Result gfx_device_create(GfxDeviceDesc *dev_info, GfxDevice *dev);
 Result gfx_buffer_create(GfxDevice dev, GfxBufferDesc *desc, GfxBuffer *out);
-Result gfx_pipeline_create(GfxDevice dev, GfxPipelineDesc *desc);
+Result gfx_pipeline_create(GfxDevice dev, GfxPipelineDesc *desc, GfxPipeline *out);
 void gfx_device_destroy(GfxDevice dev);
 
-GfxFrame *gfx_frame_begin(GfxDevice dev);
-void gfx_bind_pipeline(GfxFrame *f, GfxPipeline *p);
+Result gfx_frame_begin(GfxDevice dev, GfxFrame *out);
+void gfx_pass_begin(GfxFrame frame, const float clear[4]);
+void gfx_bind_pipeline(GfxFrame f, GfxPipeline p);
+void gfx_draw(GfxFrame frame, GfxBuffer vertices, uint32_t vertex_count);
 void gfx_draw_indexed(GfxFrame *f, GfxBuffer *vb, GfxBuffer *ib, uint32_t count);
-void gfx_frame_end(GfxFrame *f);
+void gfx_pass_end(GfxFrame frame);
+Result gfx_frame_end(GfxFrame f);
+
+Result gfx_platform_surface_instance_extensions(Array(CharPtr) *out, uint32_t *ws_mask);
+void gfx_platform_framebuffer_size_get(GfxDevice dev, const CoreNativeWindow *window);
+Result gfx_platform_surface_create(GfxDevice dev, uint32_t ws_mask, const CoreNativeWindow *w);

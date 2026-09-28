@@ -53,7 +53,7 @@ read_file(const char *filename, Array(char) *da) {
         fprintf(stderr, "Error: read invalid amount of bytes: expect %zu got %zu\n", file_size, bytes_read);
     }
 
-    TRY(tda_from(da, buffer, bytes_read));
+    tda_from(da, buffer, bytes_read);
 
     fclose(shader_source);
 
