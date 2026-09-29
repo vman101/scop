@@ -55,10 +55,11 @@ typedef struct {
 } GfxPipelineDesc;
 
 typedef struct {
-    GfxBufferUsage usage;
-    GfxMemoryKind mem;
-    size_t size;
-    const void *data;
+    GfxBufferUsage  usage;
+    GfxMemoryKind   mem;
+    uint64_t        count;
+    uint64_t        member_size;
+    const void      *data;
 } GfxBufferDesc;
 
 typedef void * GfxPlatform;
@@ -83,8 +84,8 @@ void gfx_device_destroy(GfxDevice dev);
 Result gfx_frame_begin(GfxDevice dev, GfxFrame *out);
 void gfx_pass_begin(GfxFrame frame, const float clear[4]);
 void gfx_bind_pipeline(GfxFrame f, GfxPipeline p);
-void gfx_draw(GfxFrame frame, GfxBuffer vertices, uint32_t vertex_count);
-void gfx_draw_indexed(GfxFrame *f, GfxBuffer *vb, GfxBuffer *ib, uint32_t count);
+void gfx_draw(GfxFrame frame, GfxBuffer vertices);
+void gfx_draw_indexed(GfxFrame frame, GfxBuffer vertices, GfxBuffer indices);
 void gfx_pass_end(GfxFrame frame);
 Result gfx_frame_end(GfxFrame f);
 

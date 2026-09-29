@@ -132,7 +132,7 @@ gfx_device_destroy(GfxDevice_T *dev) {
         vkDestroyImageView(ctx->logical_device, *tda_at(&dev->swapchain.image_views, i), nullptr);
     }
     // tda_destroy(&dev->buffers);
-    tda_destroy(&dev->swapchain.framebuffers)
+    tda_destroy(&dev->swapchain.framebuffers);
     tda_destroy(&dev->swapchain.image_views);
     tda_destroy(&dev->swapchain.images);
     vkDestroyRenderPass(ctx->logical_device, dev->render_pass, nullptr);

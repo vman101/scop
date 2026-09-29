@@ -1,4 +1,6 @@
+#include "gfx/gfx.h"
 #include "gfx_vulkan_internal.h"
+#include <vulkan/vulkan_core.h>
 
 Result
 gfx_frame_begin(GfxDevice dev, GfxFrame *out) {
@@ -80,10 +82,19 @@ gfx_bind_pipeline(GfxFrame f, GfxPipeline p) {
 }
 
 void
-gfx_draw(GfxFrame frame, GfxBuffer vertices, uint32_t vertex_count) {
+gfx_draw(GfxFrame frame, GfxBuffer vertices) {
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(frame->cmd, 0, 1, &vertices->handle, &offset);
-    vkCmdDraw(frame->cmd, vertex_count, 1, 0, 0);
+    vkCmdDraw(frame->cmd, vertices->count, 1, 0, 0);
+}
+
+void
+gfx_draw_indexed(GfxFrame frame, GfxBuffer vertices, GfxBuffer indices) {
+    VkDeviceSize offset = 0;
+    VkIndexType type = indices->member_size == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+    vkCmdBindVertexBuffers(frame->cmd, 0, 1, &vertices->handle, &offset);
+    vkCmdBindIndexBuffer(frame->cmd, indices->handle, 0, type);
+    vkCmdDrawIndexed(frame->cmd, indices->count, 1, 0, 0, 0);
 }
 
 void

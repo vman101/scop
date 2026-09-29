@@ -15,7 +15,7 @@ UNAME := $(shell uname)
 LIB_DIR := lib/
 TARGET := scop
 SRCDIR := src/
-CORE := da.c utils.c
+CORE := da.c utils.c sv.c
 VK := 	validation_layers.c logical_device.c \
 		swapchain.c physical_device.c memory.c \
 		render_pass.c shader.c command.c \
@@ -23,7 +23,7 @@ VK := 	validation_layers.c logical_device.c \
 RENDERER := renderer.c draw.c
 PLATFORM := platform_glfw.c
 
-ASSET := $(addprefix $(LIB_DIR)asset/, obj_parser.zig)
+ASSET := asset_mtl.c asset_obj.c asset_debug.c
 
 GFX_VULKAN := gfx_vulkan.c $(addprefix gfx_vulkan_, \
 			  	buffer.c swapchain.c pipeline.c \
@@ -31,6 +31,7 @@ GFX_VULKAN := gfx_vulkan.c $(addprefix gfx_vulkan_, \
 
 SRC    := 	$(addprefix $(SRCDIR), main.c) \
 			$(addprefix $(LIB_DIR)core/, $(CORE)) \
+			$(addprefix $(LIB_DIR)asset/, $(ASSET)) \
 			$(addprefix $(LIB_DIR)platform/, $(PLATFORM)) \
 			$(addprefix $(LIB_DIR)gfx/vulkan/, $(GFX_VULKAN)) \
 			$(addprefix $(LIB_DIR)gfx/vulkan/vk/, $(VK))

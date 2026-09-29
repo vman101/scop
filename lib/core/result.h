@@ -8,7 +8,14 @@
     X(RESULT_ERR_FOPEN) \
     X(RESULT_ERR_GLFW) \
     X(RESULT_OUT_OF_SPACE) \
-    X(RESULT_ERR_TODO)
+    X(RESULT_ERR_TODO) \
+    X(RESULT_ERR_PARSE_FLOAT) \
+    X(RESULT_ERR_PARSE_EXPECT)
+
+#define RESULT_RANGE_CORE       0
+#define RESULT_RANGE_GFX        1000
+#define RESULT_RANGE_PLATFORM   2000
+#define RESULT_RANGE_APP        3000
 
 typedef enum {
 #define X(name) name,
@@ -62,4 +69,3 @@ typedef enum {
         fprintf(stderr, "  %s failed (%s)\n    at %s:%d\n", #call, result_str(r), __FILE__, __LINE__); \
         goto label; \
     } } while (0)
-

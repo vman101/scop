@@ -1,106 +1,163 @@
 #include "core/core.h"
+#include "core/result.h"
 #include "core/sv.h"
 #include <core/array_types.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "stdbool.h"
+#include "asset.h"
+#include <core/math.h>
 
-typedef enum {
-    OBJ_ENTRY_TYPE_V,
-    OBJ_ENTRY_TYPE_F,
-    OBJ_ENTRY_TYPE_VT,
-    OBJ_ENTRY_TYPE_O,
-    OBJ_ENTRY_TYPE_INVALID,
-    OBJ_ENTRY_TYPE_COUNT,
-} ObjEntryType;
+const StringView entry_types_sv[] = {
+#define X(name, tok) SV(tok),
+    OBJ_ENTRY_LIST
+#undef X
+};
 
-typedef struct { float u, v; } ObjVec2;
+const AssetObjEntryType entry_types_ls[] = {
+#define X(name, tok) name,
+    OBJ_ENTRY_LIST
+#undef X
+};
 
-typedef struct { float x, y, z; } ObjVec3;
-typedef struct {
-    int32_t poition;
-    int32_t texcoord;
-    int32_t normal;
-} ObjIndex;
+const char *entry_types_nm[] = {
+#define X(name, tok) #name,
+    OBJ_ENTRY_LIST
+#undef X
+};
 
-DECLARE_ARRAY(ObjVec2);
-DECLARE_ARRAY(ObjVec3);
-DECLARE_ARRAY(ObjIndex);
-
-typedef struct {
-    Array(ObjVec3)  positions;
-    Array(ObjVec2)  tex_coords;
-    Array(ObjVec3)  normals;
-    Array(ObjIndex) indices;
-} ObjData;
-
-ObjEntryType asset_obj_entry_type_get(StringView s) {
-    StringView entry_types[] = { SV("v"), SV("f"), SV("vt"), SV("o") };
-    for (size_t i = 0; i < ARRAY_LEN(entry_types); i++) {
-        if (sv_eq(s, entry_types[i])) {
-            return i;
+int asset_entry_type_get(StringView s, const StringView entries_sv[], const int entries_ls[], size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        if (sv_eq(s, entries_sv[i])) {
+            return entries_ls[i];
         }
     }
     return OBJ_ENTRY_TYPE_INVALID;
 }
 
-bool sv_to_float(StringView s, float *out) {
-    char buf[64];
-    if (s.len == 0 || s.len >= sizeof(buf)) {
-        return false;
-    }
-    memcpy(buf, s.data, s.len);
-    buf[s.len] = '\0';
-    char *end;
-    *out = strtof(buf, &end);
-    return end == buf + s.len;
-}
+Result asset_obj_parse_face_field(StringView field, AssetParseDebugTracker *tracker, AssetObjIndex *indices) {
+    const char *const start_pos = field.data;
+    StringView s                = sv_trim_left(sv_chop_by_delim(&field, ' '));
+    int32_t values[3]           = {0};
 
-Result asset_obj_parse_face(StringView s, Array(ObjIndex) *indices) {
     while (s.len) {
         for (size_t i = 0; i < 3; i++) {
-            ObjIndex i = {0};
             StringView tok = sv_trim_left(sv_chop_by_delim(&s, '/'));
-            if (!sv_empty(tok)) {
-            }
+            tracker->cursor = tok.data - start_pos;
+            if (sv_empty(&tok)) { continue; }
+            TRY(sv_to_long(tok, &values[i]));
         }
     }
+    *indices = ((AssetObjIndex){ values[0], values[1], values[2] });
+    return RESULT_OK;
 }
 
-ObjData asset_obj_data_init(void) {
-    ObjData o = {0};
+Result asset_obj_parse_face(StringView line, AssetParseDebugTracker *tracker, AssetObjData *o) {
+    AssetObjIndex verts[64];
+    size_t n = 0;
+
+    while (line.len) {
+        StringView field = sv_trim_left(sv_chop_by_delim(&line, ' '));
+        if (sv_empty(&field)) continue;
+        if (n == 64) return RESULT_ERR_PARSE_EXPECT;              // absurd polygon
+        TRY(asset_obj_parse_face_field(field, tracker, &verts[n++]));
+    }
+    if (n < 3) return RESULT_ERR_PARSE_EXPECT;
+
+    for (size_t i = 1; i + 1 < n; i++) {
+        tda_push(&o->indices, &verts[0]);
+        tda_push(&o->indices, &verts[i]);
+        tda_push(&o->indices, &verts[i + 1]);
+    }
+    return RESULT_OK;
+}
+
+AssetObjData asset_obj_data_init(void) {
+    AssetObjData o = {0};
 
     tda_create(&o.positions, 1024);
     tda_create(&o.tex_coords, 1024);
     tda_create(&o.normals, 1024);
     tda_create(&o.indices, 1024);
-    return (ObjData) {
-
-    };
+    return o;
 }
 
-Result asset_obj_file_load(const char *filename, ObjData *out) {
+Result asset_parse_vector(StringView line, AssetParseDebugTracker *tracker, uint32_t vec_len, OutVec *out) {
+    float values[3]       = {0};
+    const char *start_pos = line.data;
+    size_t i              = 0;
+
+    for (; i < vec_len && line.len; i++) {
+        StringView tok  = sv_trim_left(sv_chop_by_delim(&line, ' '));
+        tracker->cursor = tok.data - start_pos;
+        if (sv_empty(&tok)) { continue; }
+        TRY(sv_to_float(tok, &values[i]));
+    }
+    if (i < (vec_len - 1)) {
+        fprintf(stderr, "Error: expected %u fields, but got %zu\n", vec_len, i + 1);
+        return RESULT_ERR_PARSE_EXPECT;
+    }
+
+    if (vec_len == 1) {
+        *out = (OutVec){ .f = values[0] };
+    } else if (vec_len == 2) {
+        *out = (OutVec){ .v2 = (Vec2){ values[0], values[1] } };
+    } else if (vec_len == 3) {
+        *out = (OutVec){ .v3 = (Vec3){ values[0], values[1], values[2] } };
+    }
+    return RESULT_OK;
+}
+
+Result asset_obj_parse_position(StringView line, AssetParseDebugTracker *tracker, Array(Vec3) *positions) {
+    OutVec v;
+    TRY(asset_parse_vector(line, tracker, 3, &v));
+    tda_push(positions, &v.v3);
+    return RESULT_OK;
+}
+
+Result asset_obj_parse_tex_coords(StringView line, AssetParseDebugTracker *tracker, Array(Vec2) *tex_coords) {
+    OutVec v;
+    TRY(asset_parse_vector(line, tracker, 2, &v));
+    tda_push(tex_coords, &v.v2);
+    return RESULT_OK;
+}
+
+Result asset_obj_file_load(const char *filename, AssetParseDebugTracker *tracker, AssetObjData *out) {
     Array(char) content = {0};
     TRY(read_file(filename, &content));
     StringView file = { tda_data(&content), tda_size(&content) };
-    ObjData obj = {0};
     Result r = RESULT_OK;
 
-    while (file.data) {
-        StringView line = sv_trim_left(sv_chop_by_delim(&file, '\n'));
-        StringView token = sv_trim_left(sv_chop_by_delim(&line, ' '));
-        ObjEntryType type = asset_obj_entry_type_get(token);
+    while (file.len) {
+        tracker->line++;
+        StringView line   = sv_trim_left(sv_chop_by_delim(&file, '\n'));
+        StringView token  = sv_trim_left(sv_chop_by_delim(&line, ' '));
+        AssetObjEntryType type = asset_entry_type_get(token, entry_types_sv, (int *)entry_types_ls, ARRAY_LEN(entry_types_sv));
         switch (type) {
             case OBJ_ENTRY_TYPE_F:
-                asset_obj_parse_face(line, &obj.indices);
+                TRY_GOTO(r, fail, asset_obj_parse_face(line, tracker, out));
+                break;
             case OBJ_ENTRY_TYPE_V:
+                TRY_GOTO(r, fail, asset_obj_parse_position(line, tracker, &out->positions));
+                break;
             case OBJ_ENTRY_TYPE_VT:
+                TRY_GOTO(r, fail, asset_obj_parse_tex_coords(line, tracker, &out->tex_coords));
+                break;
+            case OBJ_ENTRY_TYPE_MTL_LIB:
+            case OBJ_ENTRY_TYPE_S:
+            case OBJ_ENTRY_TYPE_USE_MTL:
+                printf("TODO: Impl parsing for type %s\n", entry_types_nm[type]);
             case OBJ_ENTRY_TYPE_O:
+            case OBJ_ENTRY_TYPE_COMMENT:
+                break;
             case OBJ_ENTRY_TYPE_INVALID:
             default:
+                printf("Invalid token: ");
+                sv_print(token);
+                printf("\n");
         }
     }
-    *out = obj;
 fail:
     tda_destroy(&content);
     return r;

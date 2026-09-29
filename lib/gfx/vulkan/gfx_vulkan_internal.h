@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gfx/gfx.h>
+#include <stdint.h>
 #include <vulkan/vulkan.h>
 #include <core/core.h>
 #include <core/allocators.h>
@@ -8,7 +9,7 @@
 #include "core/native_window.h"
 #include "vk/vk.h"
 
-#define GPU_POOL_GPU_BLOCK_SIZE (256ULL * 1024 * 1024)
+#define GPU_POOL_GPU_BLOCK_SIZE (512ULL * 1024 * 1024)
 #define GPU_BLOCK_COUNT 8
 #define GFX_FRAME_COUNT 2
 
@@ -125,9 +126,11 @@ struct GfxPipeline_T {
 
 struct GfxBuffer_T {
     VkBuffer        handle;
-    uint64_t        size;
+    uint64_t        bytes_size;
     GfxBufferUsage  usage;
     GpuAllocation   gpu_alloc;
+    uint64_t        count;
+    uint64_t        member_size;
 };
 
 /* SWAPCHAIN */

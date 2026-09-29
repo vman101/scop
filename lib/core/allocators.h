@@ -56,11 +56,11 @@ void linear_init(LinearAllocator *alloc, size_t size) {
 
 Result linear_alloc(LinearAllocator *alloc, uint64_t size, uint64_t align, uint64_t *out) {
     uint64_t offset = alloc_align(alloc->offset, align);
-    alloc->offset = offset;
-    if (offset > size) {
+    if (offset + size > alloc->size) {
         return RESULT_OUT_OF_SPACE;
     }
     *out = offset;
+    alloc->offset = offset + size;
     return RESULT_OK;
 }
 

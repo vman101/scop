@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "result.h"
+#include <stdbool.h>
 
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define DECLARE_ARRAY(T) union Array_##T { DynamicArray da; T *type_tag; }
@@ -24,11 +25,12 @@
     ((typeof((a)->type_tag))da_get_mem(&(a)->da, (i)))
 
 #define tda_size(a) ((a)->da.size)
-#define tda_data(a) ( ((typeof((a)->type_tag))(a)->da.data ))
+#define tda_data(a) (((typeof((a)->type_tag))(a)->da.data ))
 #define tda_from(a, b, cap) \
     da_create_from(&(a)->da, sizeof(*(a)->type_tag), (cap), b)
 #define tda_destroy(a) \
-    da_destroy(&(a)->da);
+    da_destroy(&(a)->da)
+#define tda_type(a) typeof(*(a)->type_tag)
 
 typedef struct {
     void        *data;

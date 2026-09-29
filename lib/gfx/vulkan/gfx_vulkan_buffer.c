@@ -1,3 +1,4 @@
+#include "core/result.h"
 #include "gfx_vulkan_internal.h"
 #include <vulkan/vulkan.h>
 #include <core/core.h>
@@ -17,14 +18,17 @@ gfx_buffer_usage_to_vulkan(GfxBufferUsage u) {
 Result
 gfx_buffer_create(GfxDevice dev, GfxBufferDesc *desc, GfxBuffer *out) {
     Result r = RESULT_OK;
+    uint64_t    buffer_bytes_size = desc->count * desc->member_size;
 
     GfxBuffer_T *gfx_buffer = alloc(sizeof(*gfx_buffer));
-    gfx_buffer->size = desc->size;
+    gfx_buffer->bytes_size = buffer_bytes_size;
+    gfx_buffer->count = desc->count;
     gfx_buffer->usage = desc->usage;
+    gfx_buffer->member_size = desc->member_size;
 
     VkBufferCreateInfo buffer_info = {0};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buffer_info.size = desc->size;
+    buffer_info.size = buffer_bytes_size;
     buffer_info.usage = gfx_buffer_usage_to_vulkan(desc->usage);
 
     TRY_GOTO(r, fail, vulkan_buffer_create(dev->ctx.logical_device, &buffer_info, &gfx_buffer->handle));
@@ -43,7 +47,7 @@ gfx_buffer_create(GfxDevice dev, GfxBufferDesc *desc, GfxBuffer *out) {
             r = RESULT_ERR_TODO;
             goto fail;
         }
-        memcpy(gfx_buffer->gpu_alloc.mapped, desc->data, desc->size);
+        memcpy(gfx_buffer->gpu_alloc.mapped, desc->data, buffer_bytes_size);
     }
 
     *out = gfx_buffer;

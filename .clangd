@@ -15,6 +15,7 @@ Diagnostics:
   ClangTidy:
     CheckOptions:
       readability-function-cognitive-complexity.IgnoreMacros: true
+      readability-braces-around-statements.ShortStatementLines: 1
     Add: [bugprone-*, performance-*, readability-*]
     Remove:
       - readability-implicit-bool-conversion

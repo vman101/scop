@@ -1,6 +1,7 @@
 #include "sv.h"
 #include <ctype.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 bool sv_eq(StringView a, StringView b) {
@@ -8,7 +9,7 @@ bool sv_eq(StringView a, StringView b) {
 }
 
 StringView sv_trim_left(StringView s) {
-    while (s.len && isspace((char)*s.data)) {
+    while (s.len && isspace((unsigned char)*s.data)) {
         s.data++;
         s.len--;
     }
@@ -27,6 +28,31 @@ StringView sv_chop_by_delim(StringView *s, char delim) {
     return head;
 }
 
-bool sv_empty(StringView s) {
-    return s.len == 0;
+void sv_print(StringView s) {
+    printf("%*.s\n", (int)s.len, s.data);
 }
+
+Result sv_to_float(StringView s, float *out) {
+    char buf[64];
+    if (s.len == 0 || s.len >= sizeof(buf)) {
+        return RESULT_ERR_PARSE_FLOAT;
+    }
+    memcpy(buf, s.data, s.len);
+    buf[s.len] = '\0';
+    char *end;
+    *out = strtof(buf, &end);
+    return (end == (buf + s.len)) ? RESULT_OK : RESULT_ERR_PARSE_FLOAT;
+}
+
+Result sv_to_long(StringView s, int32_t *out) {
+    char buf[64];
+    if (s.len == 0 || s.len >= sizeof(buf)) {
+        return false;
+    }
+    memcpy(buf, s.data, s.len);
+    buf[s.len] = '\0';
+    char *end;
+    *out = (int32_t)strtol(buf, &end, 10);
+    return (end == (buf + s.len)) ? RESULT_OK : RESULT_ERR_PARSE_FLOAT;
+}
+
