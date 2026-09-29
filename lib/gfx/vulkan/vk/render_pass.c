@@ -1,6 +1,7 @@
 #include "vk.h"
 #include <vulkan/vulkan_core.h>
 #include <string.h>
+#include <utils/result_tools.h>
 
 Result
 vulkan_render_pass_create(VkDevice device, const VkFormat *swap_chain_image_format, VkRenderPass *render_pass) {

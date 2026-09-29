@@ -1,8 +1,8 @@
-#include "core/native_window.h"
-#include "platform.h"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <core/core.h>
+#include "utils/utils.h"
+#include <interface/native_window.h>
+#include <interface/platform.h>
 
 #if defined(_WIN32)
     #define GLFW_EXPOSE_NATIVE_WIN32
@@ -38,8 +38,16 @@ void    platform_event_poll(PlatformWindow window) {
     glfwPollEvents();
 }
 
+static int platform_key_to_glfw(int key) {
+    switch (key) {
+        default:
+            return GLFW_KEY_ESCAPE;
+    }
+}
+
 bool    platform_key_is_pressed(PlatformWindow window, int key) {
-    return glfwGetKey(window->handle, key) == GLFW_PRESS;
+    int glfw_key = platform_key_to_glfw(key);
+    return glfwGetKey(window->handle, glfw_key) == GLFW_PRESS;
 }
 
 Result

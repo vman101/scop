@@ -1,9 +1,10 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <core/core.h>
 #include <stdio.h>
 #include <string.h>
+#include "core/result.h"
+#include "array_types.h"
 
 int32_t clamp(int32_t n, int32_t min, int32_t max) {
     if (n < min) {

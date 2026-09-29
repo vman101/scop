@@ -1,6 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
-#include <core/core.h>
+#include "da.h"
 
 Result da_create(DynamicArray *da, size_t member_size, size_t cap) {
     *da = (DynamicArray){ .member_size = member_size, .cap = cap };

@@ -1,6 +1,8 @@
 #include "vk.h"
 #include <string.h>
 #include <vulkan/vulkan_core.h>
+#include <utils/result_tools.h>
+#include <utils/utils.h>
 
 Result
 vulkan_memory_type_find(VkPhysicalDevice physical_device, VkMemoryPropertyFlags properties, uint32_t *type) {

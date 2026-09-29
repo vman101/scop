@@ -1,5 +1,6 @@
 #include "vk.h"
 #include <vulkan/vulkan_core.h>
+#include <utils/result_tools.h>
 
 Result
 vulkan_semaphore_create(VkDevice device, VkSemaphore *semaphore) {

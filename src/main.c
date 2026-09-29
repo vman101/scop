@@ -1,13 +1,12 @@
-#include "GLFW/glfw3.h"
-#include <core/core.h>
-#include "core/native_window.h"
-#include "gfx/gfx.h"
-#include "platform/platform.h"
+#include "interface/native_window.h"
+#include "interface/gfx.h"
+#include "interface/platform.h"
 #include <stddef.h>
 #include <core/math.h>
 #include <stdlib.h>
 #include "core/result.h"
 #include "asset/asset.h"
+#include "utils/result_tools.h"
 
 #define ALLOCATOR_IMPLEMENTATION
 
@@ -139,8 +138,8 @@ int main(void) {
 
     while (!platform_window_should_close_get(window)) {
         platform_event_poll(window);
-        if (platform_key_is_pressed(window, GLFW_KEY_ESCAPE)) {
-            platform_window_should_close_set(window, GLFW_TRUE);
+        if (platform_key_is_pressed(window, PLATFORM_KEY_ESCAPE)) {
+            platform_window_should_close_set(window, PLATFORM_TRUE);
         }
         GfxFrame f;
         TRY(gfx_frame_begin(dev, &f));

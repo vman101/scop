@@ -1,7 +1,7 @@
 #include "asset.h"
-#include "core/core.h"
 #include "core/result.h"
-#include <core/sv.h>
+#include <utils/utils.h>
+#include <utils/result_tools.h>
 #include <core/math.h>
 
 const StringView asset_mtl_entry_type_sv[] = {

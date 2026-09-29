@@ -1,13 +1,14 @@
-#include "core/core.h"
 #include "core/result.h"
-#include "core/sv.h"
-#include <core/array_types.h>
+#include "utils/sv.h"
+#include <utils/array_types.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include "stdbool.h"
 #include "asset.h"
 #include <core/math.h>
+#include "utils/result_tools.h"
+#include "utils/utils.h"
 
 const StringView entry_types_sv[] = {
 #define X(name, tok) SV(tok),

@@ -1,3 +1,5 @@
+#include <utils/result_tools.h>
+#include <utils/utils.h>
 #include "vk.h"
 #include <stdint.h>
 #include <string.h>

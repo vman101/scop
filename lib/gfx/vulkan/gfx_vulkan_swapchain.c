@@ -1,4 +1,5 @@
 #include "gfx_vulkan_internal.h"
+#include <utils/result_tools.h>
 #include <string.h>
 
 static Result

@@ -1,5 +1,7 @@
 #include "vk.h"
 #include <vulkan/vulkan_core.h>
+#include <utils/result_tools.h>
+#include <utils/utils.h>
 
 static Result
 vulkan_shader_module_create(VkDevice device, Array(char) *file_buffer, VkShaderModule *module) {

@@ -1,7 +1,8 @@
 #include "core/result.h"
 #include "gfx_vulkan_internal.h"
 #include <vulkan/vulkan.h>
-#include <core/core.h>
+#include <utils/utils.h>
+#include <utils/result_tools.h>
 #include <string.h>
 #include <stdlib.h>
 

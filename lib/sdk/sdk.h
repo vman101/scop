@@ -1,6 +1,6 @@
 #pragma once
-#include <gfx/gfx.h>
-#include <platform/platform.h>
+#include <interface/gfx.h>
+#include <interface/platform.h>
 #include <core/result.h>
 
 

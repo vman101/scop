@@ -1,6 +1,8 @@
-#include "gfx/gfx.h"
+#include "interface/gfx.h"
 #include "gfx_vulkan_internal.h"
 #include <vulkan/vulkan_core.h>
+#include <utils/utils.h>
+#include <utils/result_tools.h>
 
 Result
 gfx_frame_begin(GfxDevice dev, GfxFrame *out) {

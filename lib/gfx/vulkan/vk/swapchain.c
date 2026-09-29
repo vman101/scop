@@ -3,6 +3,9 @@
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 #include "vk.h"
+#include <utils/result_tools.h>
+#include <utils/array_types.h>
+#include <utils/utils.h>
 
 VkSurfaceFormatKHR
 vulkan_swapchain_surface_format_choose(SwapChainSupportDetails *details) {

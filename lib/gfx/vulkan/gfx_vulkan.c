@@ -1,13 +1,15 @@
-#include "core/core.h"
-#include <gfx/gfx.h>
+#include <utils/result_tools.h>
+#include <utils/utils.h>
+#include <interface/gfx.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
-#include "core/native_window.h"
+#include "interface/native_window.h"
 #include "gfx_vulkan_internal.h"
 #include "core/result.h"
 #include "vk/vk.h"
+#include <utils/da.h>
 
 const char *device_extensions[] = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -53,10 +55,12 @@ gfx_vulkan_context_init(GfxDevice_T *dev, VkContextCreateInfo *ctx_info) {
 
     uint32_t ws_mask = {0};
     Array(CharPtr) extensions = {0};
-    TRY(tda_create(&extensions, 16));
+    char **extout = {0};
+    uint32_t count = {0};
     if (window) {
-        gfx_platform_surface_instance_extensions(&extensions, &ws_mask);
+        gfx_platform_surface_instance_extensions_get(&ws_mask, &extout, &count);
     }
+    tda_from(&extensions, (void *)extout, count);
 
     VkDebugUtilsMessengerCreateInfoEXT debug_mes_info = {0};
     if (dev->debug_mode) {

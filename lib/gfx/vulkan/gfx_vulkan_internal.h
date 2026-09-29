@@ -1,12 +1,11 @@
 #pragma once
 
-#include <gfx/gfx.h>
+#include <interface/gfx.h>
 #include <stdint.h>
 #include <vulkan/vulkan.h>
-#include <core/core.h>
-#include <core/allocators.h>
+#include <utils/allocators.h>
 #include <vulkan/vulkan_core.h>
-#include "core/native_window.h"
+#include "interface/native_window.h"
 #include "vk/vk.h"
 
 #define GPU_POOL_GPU_BLOCK_SIZE (512ULL * 1024 * 1024)

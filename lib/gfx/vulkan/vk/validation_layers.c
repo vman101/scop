@@ -1,6 +1,8 @@
 #include "vk.h"
 #include <stdlib.h>
 #include <string.h>
+#include <utils/result_tools.h>
+#include <utils/utils.h>
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

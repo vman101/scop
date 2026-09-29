@@ -1,7 +1,7 @@
 #pragma once
 #include <core/result.h>
-#include <core/core.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 typedef struct {
     const char  *data;

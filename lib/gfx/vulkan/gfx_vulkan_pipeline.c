@@ -1,4 +1,6 @@
 #include "gfx_vulkan_internal.h"
+#include <utils/result_tools.h>
+#include <utils/utils.h>
 #include <string.h>
 
 // gfx_vulkan.c
@@ -19,8 +21,8 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     VkShaderModule frag_shader;
     GfxPipeline pipeline = alloc(sizeof(*pipeline));
 
-    TRY(vulkan_shader_module_create_from_file(dev->ctx.logical_device, "obj/shaders/shader.vert.spv", &vert_shader));
-    TRY(vulkan_shader_module_create_from_file(dev->ctx.logical_device, "obj/shaders/shader.frag.spv", &frag_shader));
+    TRY(vulkan_shader_module_create_from_file(dev->ctx.logical_device, desc->vertex_shader_path, &vert_shader));
+    TRY(vulkan_shader_module_create_from_file(dev->ctx.logical_device, desc->fragment_shader_path, &frag_shader));
 
     VkVertexInputBindingDescription bind_desc[GFX_MAX_BINDINGS] = {0};
     VkVertexInputAttributeDescription attr_desc[GFX_MAX_BINDINGS * GFX_MAX_ATTRIBUTES] = {0};

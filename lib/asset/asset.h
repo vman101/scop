@@ -1,11 +1,10 @@
 #pragma once
 
-#include "core/core.h"
-#include <core/array_types.h>
+#include <utils/array_types.h>
 #include <stdint.h>
 #include "stdbool.h"
 #include <core/math.h>
-#include <core/sv.h>
+#include <utils/sv.h>
 
 #define OBJ_ENTRY_LIST \
     X(OBJ_ENTRY_TYPE_V, "v") \

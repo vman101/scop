@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "result.h"
+#include "core/result.h"
 #include <stdbool.h>
 
 // NOLINTBEGIN(bugprone-macro-parentheses)
@@ -39,21 +39,12 @@ typedef struct {
     size_t      size;
 } DynamicArray;
 
-#define ARRAY_LEN(a) (sizeof(a) / sizeof((a)[0]))
-
-DECLARE_ARRAY(char);
-
-void *alloc(uint32_t size);
-Result read_file(const char *filename, Array(char) *da);
-int32_t clamp(int32_t n, int32_t min, int32_t max);
-uint32_t uclamp(uint32_t n, uint32_t min, uint32_t max);
-
-void da_set(DynamicArray *da, size_t index, void *mem);
-Result da_create(DynamicArray *da, size_t member_size, size_t cap);
-void da_create_from(DynamicArray *da, size_t member_size, size_t mem_size, void *mem);
-Result da_push(DynamicArray *da, const void *elem);
-bool da_pop(DynamicArray *da, void *out);
-void *da_get(DynamicArray *da, size_t index);
-void da_destroy(DynamicArray *da);
-void da_remove_index(DynamicArray *da, size_t index);
-void *da_get_mem(DynamicArray *da, size_t index);
+void    da_set(DynamicArray *da, size_t index, void *mem);
+Result  da_create(DynamicArray *da, size_t member_size, size_t cap);
+void    da_create_from(DynamicArray *da, size_t member_size, size_t mem_size, void *mem);
+Result  da_push(DynamicArray *da, const void *elem);
+bool    da_pop(DynamicArray *da, void *out);
+void    *da_get(DynamicArray *da, size_t index);
+void    da_destroy(DynamicArray *da);
+void    da_remove_index(DynamicArray *da, size_t index);
+void    *da_get_mem(DynamicArray *da, size_t index);

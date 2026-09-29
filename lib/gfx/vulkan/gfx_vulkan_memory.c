@@ -1,5 +1,6 @@
 #define ALLOCATORS_IMPLEMENTATION
-#include <core/allocators.h>
+#include <utils/utils.h>
+#include <utils/result_tools.h>
 #include "gfx_vulkan_internal.h"
 
 static bool

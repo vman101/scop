@@ -1,4 +1,4 @@
-#include "core/core.h"
+#include "utils/da.h"
 #if defined(_WIN32)
     #define VK_USE_PLATFORM_WIN32_KHR
 #elif defined(__APPLE__)
@@ -8,11 +8,14 @@
     #define VK_USE_PLATFORM_WAYLAND_KHR
 #endif
 
+#include <utils/utils.h>
+#include <utils/result_tools.h>
+
 #include <core/result.h>
 #include <stdint.h>
-#include <gfx/gfx.h>
+#include <interface/gfx.h>
 #include "gfx_vulkan_internal.h"
-#include <core/native_window.h>
+#include <interface/native_window.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -50,29 +53,33 @@ static bool ext_available(const VkExtensionProperties *props, uint32_t n, const 
 // Writes a bitmask of usable window systems (1u << NativeWindowSystem) to
 // `ws_mask`; store it on the device and check it at surface creation.
 // Returns the number of extensions written, or 0 if presentation is unsupported.
-Result gfx_platform_surface_instance_extensions(Array(CharPtr) *out, uint32_t *ws_mask) {
+Result gfx_platform_surface_instance_extensions_get(uint32_t *ws_mask, char ***extensions_out, uint32_t *count) {
     *ws_mask = 0;
-    uint32_t n = 0;
-    vkEnumerateInstanceExtensionProperties(NULL, &n, NULL);
-    VkExtensionProperties *props = alloc(n * sizeof *props);
+    vkEnumerateInstanceExtensionProperties(NULL, count, NULL);
+    VkExtensionProperties *props = alloc((*count) * sizeof *props);
     if (!props) {
         return RESULT_ERR_ALLOC;
     }
-    vkEnumerateInstanceExtensionProperties(NULL, &n, props);
+    vkEnumerateInstanceExtensionProperties(NULL, count, props);
+
+    Array(CharPtr) out = {0};
+    TRY(tda_create(&out, *count));
 
     Result res = RESULT_OK;
-    if (ext_available(props, n, VK_KHR_SURFACE_EXTENSION_NAME)) {
+    if (ext_available(props, *count, VK_KHR_SURFACE_EXTENSION_NAME)) {
         const char *surface_ext = VK_KHR_SURFACE_EXTENSION_NAME;
-        res = tda_push(out, (void *)&surface_ext);
+        res = tda_push(&out, (void *)&surface_ext);
         for (uint32_t i = 0; res == RESULT_OK && i < PLATFORM_SURFACE_EXT_COUNT; i++) {
-            if (ext_available(props, n, k_platform_surface_exts[i].name)) {
-                res = tda_push(out, (void *)&k_platform_surface_exts[i].name);
+            if (ext_available(props, *count, k_platform_surface_exts[i].name)) {
+                res = tda_push(&out, (void *)&k_platform_surface_exts[i].name);
                 *ws_mask |= 1U << k_platform_surface_exts[i].ws;
             }
         }
     }
 
     free(props); // or your allocator's matching free
+    *extensions_out = tda_data(&out);
+    *count = tda_size(&out);
     if (res == RESULT_OK && *ws_mask == 0) {
         res = RESULT_ERR_VULKAN;
     }
