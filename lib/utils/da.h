@@ -24,6 +24,9 @@
 #define tda_at(a, i) \
     ((typeof((a)->type_tag))da_get_mem(&(a)->da, (i)))
 
+#define tda_get(a, i) \
+    ((typeof((a)->type_tag))da_get(&(a)->da, (i)))
+
 #define tda_size(a) ((a)->da.size)
 #define tda_data(a) (((typeof((a)->type_tag))(a)->da.data ))
 #define tda_from(a, b, cap) \
@@ -31,6 +34,9 @@
 #define tda_destroy(a) \
     da_destroy(&(a)->da)
 #define tda_type(a) typeof(*(a)->type_tag)
+
+#define tda_back(a) \
+    tda_get((a), (tda_size((a)) - (tda_size((a)) > 0)))
 
 typedef struct {
     void        *data;

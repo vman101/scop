@@ -11,7 +11,7 @@ const StringView asset_mtl_entry_type_sv[] = {
 };
 
 const char *asset_mtl_entry_type_nm[] = {
-#define X(name, tok) #name
+#define X(name, tok) #name,
     ASSET_MTL_ENTRY_LIST
 #undef X
 };
@@ -22,15 +22,25 @@ const AssetMaterialEntryType asset_mtl_entry_type_ls[] = {
 #undef X
 };
 
+int asset_entry_type_get(StringView s, const StringView entries_sv[], const int entries_ls[], size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        if (sv_eq(s, entries_sv[i])) {
+            return entries_ls[i];
+        }
+    }
+    return entries_ls[len - 1];
+}
 
 Result asset_mtl_file_load(const char *filename, AssetParseDebugTracker *tracker, AssetMaterial *out) {
     Array(char) content = {0};
-    TRY(read_file(filename, &content));
+    TRY(read_file(filename, "r", &content));
     StringView file = { tda_data(&content), tda_size(&content) };
     Result r = RESULT_OK;
     while (file.len) {
+        tracker->cursor = 0;
         tracker->line++;
         StringView line   = sv_trim_left(sv_chop_by_delim(&file, '\n'));
+        if (sv_empty(&line)) { continue; }
         StringView token  = sv_trim_left(sv_chop_by_delim(&line, ' '));
         AssetMaterialEntryType type = asset_entry_type_get(token, asset_mtl_entry_type_sv, (int *)asset_mtl_entry_type_ls, ARRAY_LEN(asset_mtl_entry_type_sv));
         switch (type) {
@@ -82,11 +92,18 @@ Result asset_mtl_file_load(const char *filename, AssetParseDebugTracker *tracker
                 out->optical_density = v.f;
                 break;
             }
+            case ASSET_MTL_ENTRY_NAME: {
+                TRY(asset_parse_string(line, tracker, &out->name));
+                break;
+            }
+            case ASSET_MTL_ENTRY_ILLUM: {
+                TRY(asset_parse_uint32_t(line, tracker, &out->illum));
+                break;
+            }
+            case ASSET_MTL_ENTRY_COMMENT:
             case ASSET_MTL_ENTRY_COUNT: break;
             default:
-                printf("Invalid token: ");
-                sv_print(token);
-                printf("\n");
+                asset_debug_print_invalid_token(filename, tracker, token, type, asset_mtl_entry_type_nm);
         }
     }
 fail:

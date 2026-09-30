@@ -1,6 +1,5 @@
 #include "asset.h"
 
-
 void asset_obj_debug_print_vec3_arr(const char *title, Array(Vec3) *position) {
     printf("%s\n", title);
     for (size_t i = 0; i < tda_size(position); ++i) {
@@ -25,8 +24,12 @@ void asset_debug_print_float(const char *title, float f) {
     printf("  %s: %f\n", title, f);
 }
 
+void asset_debug_print_uint32_t(const char *title, uint32_t u) {
+    printf("  %s: %u\n", title, u);
+}
+
 void asset_debug_mtl_print(AssetMaterial *mtl) {
-    printf("Matrial\n");
+    printf("mtl %s\n", mtl->name);
     asset_debug_print_vector3("Ka", mtl->ambient);
     asset_debug_print_vector3("Kd", mtl->diffuse);
     asset_debug_print_vector3("Ks", mtl->specular);
@@ -35,5 +38,12 @@ void asset_debug_mtl_print(AssetMaterial *mtl) {
     asset_debug_print_float("Tr", mtl->transparent);
     asset_debug_print_vector3("Tf", mtl->transmission_filter);
     asset_debug_print_float("Ni", mtl->optical_density);
+    asset_debug_print_uint32_t("illum", mtl->illum);
+}
 
+void asset_debug_print_invalid_token(const char *filename, AssetParseDebugTracker *tracker, StringView token, int type, const char**entry_names) {
+    printf("Invalid token: ");
+    sv_print(token);
+    printf("\t-> %s \n", entry_names[type]);
+    printf("  at %s\t%u:%u\n", filename, tracker->line, tracker->cursor);
 }

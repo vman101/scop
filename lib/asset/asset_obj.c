@@ -12,30 +12,21 @@
 
 const StringView entry_types_sv[] = {
 #define X(name, tok) SV(tok),
-    OBJ_ENTRY_LIST
+    ASSET_OBJ_ENTRY_LIST
 #undef X
 };
 
 const AssetObjEntryType entry_types_ls[] = {
 #define X(name, tok) name,
-    OBJ_ENTRY_LIST
+    ASSET_OBJ_ENTRY_LIST
 #undef X
 };
 
 const char *entry_types_nm[] = {
 #define X(name, tok) #name,
-    OBJ_ENTRY_LIST
+    ASSET_OBJ_ENTRY_LIST
 #undef X
 };
-
-int asset_entry_type_get(StringView s, const StringView entries_sv[], const int entries_ls[], size_t len) {
-    for (size_t i = 0; i < len; i++) {
-        if (sv_eq(s, entries_sv[i])) {
-            return entries_ls[i];
-        }
-    }
-    return OBJ_ENTRY_TYPE_INVALID;
-}
 
 Result asset_obj_parse_face_field(StringView field, AssetParseDebugTracker *tracker, AssetObjIndex *indices) {
     const char *const start_pos = field.data;
@@ -52,6 +43,13 @@ Result asset_obj_parse_face_field(StringView field, AssetParseDebugTracker *trac
     }
     *indices = ((AssetObjIndex){ values[0], values[1], values[2] });
     return RESULT_OK;
+}
+
+static void asset_obj_group_close(AssetObjData *o) {
+    AssetObjGroup *last = tda_back(&o->groups);
+    if (last) {
+        last->index_count = tda_size(&o->indices) - last->first_index;
+    }
 }
 
 Result asset_obj_parse_face(StringView line, AssetParseDebugTracker *tracker, AssetObjData *o) {
@@ -84,32 +82,6 @@ AssetObjData asset_obj_data_init(void) {
     return o;
 }
 
-Result asset_parse_vector(StringView line, AssetParseDebugTracker *tracker, uint32_t vec_len, OutVec *out) {
-    float values[3]       = {0};
-    const char *start_pos = line.data;
-    size_t i              = 0;
-
-    for (; i < vec_len && line.len; i++) {
-        StringView tok  = sv_trim_left(sv_chop_by_delim(&line, ' '));
-        tracker->cursor = tok.data - start_pos;
-        if (sv_empty(&tok)) { continue; }
-        TRY(sv_to_float(tok, &values[i]));
-    }
-    if (i < (vec_len - 1)) {
-        fprintf(stderr, "Error: expected %u fields, but got %zu\n", vec_len, i + 1);
-        return RESULT_ERR_PARSE_EXPECT;
-    }
-
-    if (vec_len == 1) {
-        *out = (OutVec){ .f = values[0] };
-    } else if (vec_len == 2) {
-        *out = (OutVec){ .v2 = (Vec2){ values[0], values[1] } };
-    } else if (vec_len == 3) {
-        *out = (OutVec){ .v3 = (Vec3){ values[0], values[1], values[2] } };
-    }
-    return RESULT_OK;
-}
-
 Result asset_obj_parse_position(StringView line, AssetParseDebugTracker *tracker, Array(Vec3) *positions) {
     OutVec v;
     TRY(asset_parse_vector(line, tracker, 3, &v));
@@ -124,39 +96,49 @@ Result asset_obj_parse_tex_coords(StringView line, AssetParseDebugTracker *track
     return RESULT_OK;
 }
 
+Result asset_obj_parse_group(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
+    asset_obj_group_close(obj);
+    AssetObjGroup new = {0};
+    TRY(asset_parse_string(line, tracker, new.name));
+    new.first_index = tda_size(&obj->indices);
+    new.index_count = 0;
+    return RESULT_OK;
+}
+
 Result asset_obj_file_load(const char *filename, AssetParseDebugTracker *tracker, AssetObjData *out) {
     Array(char) content = {0};
-    TRY(read_file(filename, &content));
+    TRY(read_file(filename, "r", &content));
     StringView file = { tda_data(&content), tda_size(&content) };
     Result r = RESULT_OK;
 
     while (file.len) {
         tracker->line++;
         StringView line   = sv_trim_left(sv_chop_by_delim(&file, '\n'));
+        if (sv_empty(&line)) { continue; }
         StringView token  = sv_trim_left(sv_chop_by_delim(&line, ' '));
         AssetObjEntryType type = asset_entry_type_get(token, entry_types_sv, (int *)entry_types_ls, ARRAY_LEN(entry_types_sv));
         switch (type) {
-            case OBJ_ENTRY_TYPE_F:
+            case ASSET_OBJ_ENTRY_TYPE_F:
                 TRY_GOTO(r, fail, asset_obj_parse_face(line, tracker, out));
                 break;
-            case OBJ_ENTRY_TYPE_V:
+            case ASSET_OBJ_ENTRY_TYPE_V:
                 TRY_GOTO(r, fail, asset_obj_parse_position(line, tracker, &out->positions));
                 break;
-            case OBJ_ENTRY_TYPE_VT:
+            case ASSET_OBJ_ENTRY_TYPE_VT:
                 TRY_GOTO(r, fail, asset_obj_parse_tex_coords(line, tracker, &out->tex_coords));
                 break;
-            case OBJ_ENTRY_TYPE_MTL_LIB:
-            case OBJ_ENTRY_TYPE_S:
-            case OBJ_ENTRY_TYPE_USE_MTL:
+            case ASSET_OBJ_ENTRY_TYPE_MTL_LIB:
+            case ASSET_OBJ_ENTRY_TYPE_S:
+            case ASSET_OBJ_ENTRY_TYPE_USE_MTL:
                 printf("TODO: Impl parsing for type %s\n", entry_types_nm[type]);
-            case OBJ_ENTRY_TYPE_O:
-            case OBJ_ENTRY_TYPE_COMMENT:
+            case ASSET_OBJ_ENTRY_TYPE_O:
+            case ASSET_OBJ_ENTRY_TYPE_G:
+                TRY_GOTO(r, fail, asset_obj_parse_group(line, tracker, out));
+            case ASSET_OBJ_ENTRY_TYPE_COMMENT:
                 break;
-            case OBJ_ENTRY_TYPE_INVALID:
+            case ASSET_OBJ_ENTRY_TYPE_INVALID:
             default:
-                printf("Invalid token: ");
-                sv_print(token);
-                printf("\n");
+                asset_debug_print_invalid_token(filename, tracker, token, type, entry_types_nm);
         }
     }
 fail:

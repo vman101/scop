@@ -70,6 +70,8 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
+    tracker = (AssetParseDebugTracker){0};
+
     AssetMaterial mat = {0};
     const char *mtl_path = "assets/resources/42.mtl";
     r = asset_mtl_file_load(mtl_path, &tracker, &mat);

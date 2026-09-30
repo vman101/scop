@@ -24,7 +24,7 @@ RENDERER := renderer.c draw.c
 
 PLATFORM_GLFW := platform_glfw.c
 
-ASSET := asset_mtl.c asset_obj.c asset_debug.c
+ASSET := asset_mtl.c asset_obj.c asset_debug.c asset_util.c
 
 GFX_VULKAN := gfx_vulkan.c $(addprefix gfx_vulkan_, \
 			  	buffer.c swapchain.c pipeline.c \
@@ -32,7 +32,7 @@ GFX_VULKAN := gfx_vulkan.c $(addprefix gfx_vulkan_, \
 
 LIB_SRC    := 	$(addprefix $(LIB_DIR)utils/, $(UTILS)) \
 			$(addprefix $(LIB_DIR)asset/, $(ASSET)) \
-			$(addprefix $(LIB_DIR)platform/glfw, $(PLATFORM_GLFW)) \
+			$(addprefix $(LIB_DIR)platform/glfw/, $(PLATFORM_GLFW)) \
 			$(addprefix $(LIB_DIR)gfx/vulkan/, $(GFX_VULKAN)) \
 			$(addprefix $(LIB_DIR)gfx/vulkan/vk/, $(VK))
 			# $(addprefix $(SRCDIR)renderer/, $(RENDERER)) \

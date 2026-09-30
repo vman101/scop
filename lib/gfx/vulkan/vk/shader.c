@@ -20,7 +20,7 @@ Result
 vulkan_shader_module_create_from_file(VkDevice device, const char *filename, VkShaderModule *module) {
     Array(char) da = {0};
 
-    TRY(read_file(filename, &da));
+    TRY(read_file(filename, "rb", &da));
     TRY(vulkan_shader_module_create(device, &da, module));
     tda_destroy(&da);
 

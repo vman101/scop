@@ -29,7 +29,7 @@ StringView sv_chop_by_delim(StringView *s, char delim) {
 }
 
 void sv_print(StringView s) {
-    printf("%*.s\n", (int)s.len, s.data);
+    printf("%.*s", (int)s.len, s.data);
 }
 
 Result sv_to_float(StringView s, float *out) {
