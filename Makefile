@@ -3,7 +3,7 @@ GLFW_BUILD := $(GLFW_DIR)/build
 GLFW_LIB := $(GLFW_BUILD)/src/libglfw3.a
 
 CC      := clang
-CFLAGS  := -Wall -Wextra -std=c23 -MMD -MP -Isrc -I$(GLFW_DIR)/include -Ilib -g
+CFLAGS  := -Wall -Wextra -std=c99 -MMD -MP -Isrc -I$(GLFW_DIR)/include -Iexternal -Ilib -g
 LDFLAGS :=
 LDLIBS  := -lvulkan -lm -ldl -lpthread
 SAN_FLAGS := -fsanitize=address,undefined -fno-omit-frame-pointer
@@ -43,7 +43,8 @@ OBJDIR := obj/
 LIB_OBJ := $(LIB_SRC:%.c=$(OBJDIR)%.o)
 APP_OBJ := $(APP_SRC:%.c=$(OBJDIR)%.o)
 LIB     := $(OBJDIR)libscop.a
-DEP    := $(OBJ:.o=.d)
+DEP    := $(LIB_OBJ:.o=.d) $(APP_OBJ:.o=.d)
+
 
 SHADER_DIR := shaders/
 SHADER_SRC := $(wildcard $(SHADER_DIR)*.vert $(SHADER_DIR)*.frag $(SHADER_DIR)*.comp)
@@ -53,9 +54,8 @@ SHADER_BIN := $(SHADER_SRC:$(SHADER_DIR)%=$(SPVDIR)%.spv)
 
 all: $(TARGET)
 
-$(TARGET): $(APP_OBJ) $(LIB)
+$(TARGET): $(APP_OBJ) $(LIB) $(SHADER_BIN)
 	$(CC) $(CFLAGS) $(APP_OBJ) $(LIB) $(LIBS) $(LDLIBS) $(LDFLAGS) -o $@
-
 
 run: $(TARGET)
 	./$(TARGET)
@@ -65,7 +65,7 @@ val: all
 
 lib: $(LIB)
 
-$(LIB): $(LIB_OBJ) $(GLFW_LIB)
+$(LIB): $(LIB_OBJ)
 	ar rcs $@ $^
 
 $(SPVDIR)%.spv: $(SHADER_DIR)%

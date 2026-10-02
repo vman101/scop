@@ -1,10 +1,10 @@
 #pragma once
 
 #include <utils/array_types.h>
+#include "utils/defines.h"
 #include <stdint.h>
-#include "core/defines.h"
 #include "stdbool.h"
-#include <core/math.h>
+#include <interface/mage_math.h>
 #include <utils/sv.h>
 
 typedef struct AssetMtl       AssetMtl;

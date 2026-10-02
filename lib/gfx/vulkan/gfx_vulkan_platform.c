@@ -11,11 +11,11 @@
 #include <utils/utils.h>
 #include <utils/result_tools.h>
 
-#include <core/result.h>
+#include <interface/mage_result.h>
 #include <stdint.h>
-#include <interface/gfx.h>
+#include <interface/mage_gfx.h>
 #include "gfx_vulkan_internal.h"
-#include <interface/native_window.h>
+#include <interface/mage_native_window.h>
 #include <string.h>
 #include <stdlib.h>
 

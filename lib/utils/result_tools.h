@@ -1,4 +1,4 @@
-#include <core/result.h>
+#include <interface/mage_result.h>
 
 [[maybe_unused]] static const char *result_str(Result r) {
     static const char *names[] = {

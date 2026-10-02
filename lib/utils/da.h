@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "core/result.h"
+#include "interface/mage_result.h"
 #include <stdbool.h>
 
 // NOLINTBEGIN(bugprone-macro-parentheses)

@@ -1,13 +1,13 @@
 #include <utils/result_tools.h>
 #include <utils/utils.h>
-#include <interface/gfx.h>
+#include <interface/mage_gfx.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
-#include "interface/native_window.h"
+#include "interface/mage_native_window.h"
 #include "gfx_vulkan_internal.h"
-#include "core/result.h"
+#include "interface/mage_result.h"
 #include "vk/vk.h"
 #include <utils/da.h>
 

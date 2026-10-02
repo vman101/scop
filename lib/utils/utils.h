@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/result.h"
+#include <interface/mage_result.h>
 #include <stdint.h>
 #include "da.h"
 #include "array_types.h"

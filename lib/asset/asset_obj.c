@@ -1,4 +1,4 @@
-#include "core/result.h"
+#include "interface/mage_result.h"
 #include "utils/sv.h"
 #include <utils/array_types.h>
 #include <stdint.h>
@@ -6,10 +6,10 @@
 #include <string.h>
 #include "stdbool.h"
 #include "asset.h"
-#include <core/math.h>
+#include <interface/mage_math.h>
 #include "utils/result_tools.h"
 #include "utils/utils.h"
-#include <core/defines.h>
+#include <utils/defines.h>
 
 const StringView entry_types_sv[] = {
 #define X(name, tok) SV(tok),

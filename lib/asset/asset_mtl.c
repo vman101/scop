@@ -1,8 +1,7 @@
 #include "asset.h"
-#include "core/result.h"
+#include "interface/mage_result.h"
 #include <utils/utils.h>
 #include <utils/result_tools.h>
-#include <core/math.h>
 
 const StringView asset_mtl_entry_type_sv[] = {
 #define X(name, tok) SV(tok),

@@ -1,13 +1,15 @@
 CompileFlags:
   Compiler: clang
   Add:
-    - -xc                # treat .h files as C, not C++
+    - -xc
     - -std=c23
     - -Wall
     - -Wextra
     - -I/home/victor/Projects/scop/lib
     - -I/home/victor/Projects/scop/src
     - -I/home/victor/Projects/scop/external/glfw/include
+    - -I/home/victor/Projects/scop/external
+    - -D_DEFAULT_SOURCE
 
 Diagnostics:
   UnusedIncludes: Strict
@@ -30,3 +32,9 @@ InlayHints:
 
 Hover:
   ShowAKA: true
+
+---
+If:
+  PathMatch: .*\.h
+CompileFlags:
+  Add: [-Wno-unused-function]

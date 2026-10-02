@@ -1,4 +1,4 @@
-#include "core/result.h"
+#include "interface/mage_result.h"
 #include "gfx_vulkan_internal.h"
 #include <vulkan/vulkan.h>
 #include <utils/utils.h>

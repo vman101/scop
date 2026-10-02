@@ -1,11 +1,11 @@
 #pragma once
 
-#include <interface/gfx.h>
+#include <interface/mage_gfx.h>
 #include <stdint.h>
 #include <vulkan/vulkan.h>
 #include <utils/allocators.h>
 #include <vulkan/vulkan_core.h>
-#include "interface/native_window.h"
+#include "interface/mage_native_window.h"
 #include "vk/vk.h"
 
 #define GPU_POOL_GPU_BLOCK_SIZE (512ULL * 1024 * 1024)
@@ -104,13 +104,13 @@ struct GfxDevice_T {
     bool            debug_mode;
 };
 
-DECLARE_ARRAY(GfxVertexLayout_T);
+DECLARE_ARRAY(GfxVertexLayout);
 
 struct GfxPipelineDesc {
     const char                  *vertex_shader_path;
     const char                  *fragment_shader_path;
     bool                        depth_Test;
-    Array(GfxVertexLayout_T)    vertex_desc;
+    Array(GfxVertexLayout)      vertex_desc;
 };
 
 typedef struct {

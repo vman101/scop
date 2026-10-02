@@ -1,7 +1,7 @@
 #pragma once
-#include <interface/gfx.h>
-#include <interface/platform.h>
-#include <core/result.h>
+#include <interface/mage_gfx.h>
+#include <interface/mage_platform.h>
+#include <interface/mage_result.h>
 
 
 typedef struct {

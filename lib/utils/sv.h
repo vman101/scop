@@ -1,5 +1,6 @@
 #pragma once
-#include <core/result.h>
+#include <interface/mage_result.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
 

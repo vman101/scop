@@ -1,8 +1,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include "utils/utils.h"
-#include <interface/native_window.h>
-#include <interface/platform.h>
+#include <interface/mage_native_window.h>
+#include <interface/mage_platform.h>
 
 #if defined(_WIN32)
     #define GLFW_EXPOSE_NATIVE_WIN32

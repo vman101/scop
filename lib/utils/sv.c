@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 void sv_print(StringView s) {
     printf("%.*s", (int)s.len, s.data);

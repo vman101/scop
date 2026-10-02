@@ -1,10 +1,12 @@
-#include "interface/native_window.h"
-#include "interface/gfx.h"
-#include "interface/platform.h"
+#include <sys/time.h>
+#include <time.h>
+#include "interface/mage_native_window.h"
+#include "interface/mage_gfx.h"
+#include "interface/mage_platform.h"
 #include <stddef.h>
-#include <core/math.h>
+#include "interface/mage_math.h"
 #include <stdlib.h>
-#include "core/result.h"
+#include "interface/mage_result.h"
 #include "asset/asset.h"
 #include "utils/result_tools.h"
 
@@ -27,6 +29,8 @@ typedef struct {
     GfxBuffer indixes;
 } Mesh;
 
+typedef Vec3 Camera;
+
 static void on_frame_buffer_resize(void *dev, int width, int height) {
     gfx_resize(dev, width, height);
 }
@@ -44,8 +48,10 @@ Result sdk_asset_obj_indices_get(AssetObjData *obj, Array(uint32_t) *indices) {
 DECLARE_ARRAY(Vertex);
 
 int main(void) {
-    GfxDevice dev = {0};
-    PlatformWindow window;
+    GfxDevice dev          = {0};
+    PlatformWindow window  = {0};
+    const uint32_t  width  = 800;
+    const uint32_t  height = 600;
 
     TRY(platform_window_init(800, 600, "TEST", &window));
 
@@ -60,9 +66,9 @@ int main(void) {
     TRY(gfx_device_create(&dev_desc, &dev));
     platform_window_resize_callback_set(window, on_frame_buffer_resize, dev);
 
-    AssetObjData data = asset_obj_data_init();
+    AssetObjData data = {0};
     AssetParseDebugTracker tracker = {0};
-    const char *asset_path = "assets/resources/teapot.obj";
+    const char *asset_path = "assets/resources/42.obj";
 
     Result r = asset_obj_file_load(asset_path, &tracker, &data);
     if (r != RESULT_OK) {
@@ -71,29 +77,20 @@ int main(void) {
     }
 
     tracker = (AssetParseDebugTracker){0};
-
-    AssetMaterial mat = {0};
-    const char *mtl_path = "assets/resources/42.mtl";
-    r = asset_mtl_file_load(mtl_path, &tracker, &mat);
-    if (r != RESULT_OK) {
-        fprintf(stderr, "Error: Failed to parse %s line: %u pos: %u with error %s\n", asset_path, tracker.line, tracker.cursor, result_str(r));
-        return EXIT_FAILURE;
+    for (size_t i = 0; i < tda_size(&data.materials); i++) {
+        asset_debug_print_mtl(tda_at(&data.materials, i));
     }
 
-    asset_debug_mtl_print(&mat);
-
-    return 0;
-
-    asset_obj_debug_print_index_arr("Indices", &data.indices);
+    asset_debug_print_index_arr("Indices", &data.indices);
 
     Array(Vertex) vertices = *(Array(Vertex)*)&data.positions;
-    asset_obj_debug_print_vec3_arr("Vertexes", (Array(Vec3) *)&vertices);
+    asset_debug_print_vec3_arr("Vertexes", (Array(Vec3) *)&vertices);
 
     GfxBufferDesc buf_desc = {
         .usage = GFX_BUFFER_VERTEX,
         .mem = GFX_MEMORY_UPLOAD,
         .count = tda_size(&vertices),
-        .member_size = sizeof(tda_type(&vertices)),
+        .member_size = tda_sizeof(&vertices),
         .data = tda_data(&vertices),
     };
 
@@ -121,32 +118,69 @@ int main(void) {
         .mem = GFX_MEMORY_UPLOAD,
         .data = tda_data(&idx_data),
         .count = tda_size(&idx_data),
-        .member_size = sizeof(tda_type(&idx_data)),
+        .member_size = tda_sizeof(&idx_data),
     };
 
     TRY(gfx_buffer_create(dev, &idx_buf_desc, &idx));
 
+    GfxPushConstantDesc pc_mat4_desc = {
+        .stage = GFX_SHADER_STAGE_VERTEX,
+        .offset = 0,
+        .size = sizeof(Mat4),
+    };
+
+    GfxPipelineLayoutDesc layout_desc = {
+        .push_constant_count = 1,
+        .push_constant_descs = (GfxPushConstantDesc[]){ pc_mat4_desc },
+    };
+
     GfxPipelineDesc pipeline_desc = {
         .depth_test = false,
-        .vertex_layout = vertex_layout,
+        .vertex_layout = &vertex_layout,
+        .vertex_shader_path = "obj/shaders/shader.vert.spv",
+        .fragment_shader_path = "obj/shaders/shader.frag.spv",
+        .layout = &layout_desc,
     };
     GfxPipeline graphics_pipeline;
 
     TRY(gfx_pipeline_create(dev, &pipeline_desc, &graphics_pipeline));
 
     _Static_assert(sizeof(Vertex) == sizeof(Vec3), "vertex layout mismatch");
-    _Static_assert(sizeof(tda_type(&idx_data)) == sizeof(uint32_t), "tda_type broken");
-    _Static_assert(sizeof(tda_type(&vertices)) == sizeof(Vertex), "tda_type broken");
+    _Static_assert(tda_sizeof(&idx_data) == sizeof(uint32_t), "tda_type broken");
+    _Static_assert(tda_sizeof(&vertices) == sizeof(Vertex), "tda_type broken");
+
+    float ax = 45.0F;
+    float ay = 45.0F;
+    float az = 45.0F;
+
+    Mat4 p = mat4_perspective(radians(45.0F), (float)width/(float)height, .1F, 100.0F);
 
     while (!platform_window_should_close_get(window)) {
         platform_event_poll(window);
         if (platform_key_is_pressed(window, PLATFORM_KEY_ESCAPE)) {
             platform_window_should_close_set(window, PLATFORM_TRUE);
+        } else if (platform_key_is_pressed(window, PLATFORM_KEY_W)) {
+            ay += 5.F;
+        } else if (platform_key_is_pressed(window, PLATFORM_KEY_A)) {
+            ax -= 5.F;
+        } else if (platform_key_is_pressed(window, PLATFORM_KEY_S)) {
+            ay -= 5.F;
+        } else if (platform_key_is_pressed(window, PLATFORM_KEY_D)) {
+            ax += 5.F;
         }
+
+        Mat4 t = mat4_translate(vec3(0.0F, 0.0F, -8.F));
+        Mat4 rx = mat4_rotate_x(radians(ax));
+        Mat4 ry = mat4_rotate_y(radians(ay));
+        Mat4 rz = mat4_rotate_z(radians(az));
+        Mat4 r  = mat4_mul(rz, mat4_mul(ry, rx));
+        Mat4 rt = mat4_mul(t, r);
+        Mat4 m = mat4_mul(p, rt);
         GfxFrame f;
         TRY(gfx_frame_begin(dev, &f));
         gfx_pass_begin(f, (float[4]){ 1, 0, 0, 1.0F });
         gfx_bind_pipeline(f, graphics_pipeline);
+        gfx_push_constant_mat4(f, m);
         gfx_draw_indexed(f, buf, idx);
         gfx_pass_end(f);
         TRY(gfx_frame_end(f));
