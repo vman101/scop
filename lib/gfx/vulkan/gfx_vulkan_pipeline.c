@@ -2,6 +2,7 @@
 #include <utils/result_tools.h>
 #include <utils/utils.h>
 #include <string.h>
+#include <vulkan/vulkan_core.h>
 
 // gfx_vulkan.c
 static VkFormat gfx_format_to_vk(GfxFormat f) {
@@ -28,8 +29,8 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     VkVertexInputAttributeDescription attr_desc[GFX_MAX_BINDINGS * GFX_MAX_ATTRIBUTES] = {0};
     uint32_t attr_count = 0;
 
-    for (size_t i = 0; i < desc->vertex_layout.binding_count; i++) {
-        GfxVertexBinding *binding = &desc->vertex_layout.bindings[i];
+    for (size_t i = 0; i < desc->vertex_layout->binding_count; i++) {
+        GfxVertexBinding *binding = &desc->vertex_layout->bindings[i];
         bind_desc[i] = (VkVertexInputBindingDescription) {
             .binding = i,
             .stride = binding->stride,
@@ -52,7 +53,7 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     vert_stage_info.stage               = VK_SHADER_STAGE_VERTEX_BIT;
     vert_stage_info.module              = vert_shader;
     vert_stage_info.pName               = "main";
-    vert_stage_info.pSpecializationInfo = nullptr;
+    vert_stage_info.pSpecializationInfo = NULL;
 
     VkPipelineShaderStageCreateInfo frag_stage_info;
     memset(&frag_stage_info, 0, sizeof(frag_stage_info));
@@ -60,12 +61,12 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     frag_stage_info.stage               = VK_SHADER_STAGE_FRAGMENT_BIT;
     frag_stage_info.module              = frag_shader;
     frag_stage_info.pName               = "main";
-    frag_stage_info.pSpecializationInfo = nullptr;
+    frag_stage_info.pSpecializationInfo = NULL;
 
     VkPipelineShaderStageCreateInfo shader_stages[]      = { vert_stage_info, frag_stage_info };
     VkPipelineVertexInputStateCreateInfo vert_input_info = {0};
     vert_input_info.sType                                = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vert_input_info.vertexBindingDescriptionCount        = desc->vertex_layout.binding_count;
+    vert_input_info.vertexBindingDescriptionCount        = desc->vertex_layout->binding_count;
     vert_input_info.pVertexBindingDescriptions           = bind_desc;
     vert_input_info.vertexAttributeDescriptionCount      = attr_count;
     vert_input_info.pVertexAttributeDescriptions         = attr_desc;
@@ -106,10 +107,10 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     multisampling.sampleShadingEnable   = VK_FALSE;
     multisampling.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
     multisampling.minSampleShading      = 1.0F;
-    multisampling.pSampleMask           = nullptr;
+    multisampling.pSampleMask           = NULL;
     multisampling.alphaToCoverageEnable = VK_FALSE;
     multisampling.alphaToOneEnable      = VK_FALSE;
-    multisampling.pNext                 = nullptr;
+    multisampling.pNext                 = NULL;
 
     VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
     color_blend_attachment.colorWriteMask      =
@@ -136,14 +137,22 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     color_blend.blendConstants[2] = 0.0F;
     color_blend.blendConstants[3] = 0.0F;
 
+    GfxPushConstantDesc *pc_descs = desc->layout->push_constant_descs;
+
+    VkPushConstantRange push_range = {
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .size = pc_descs->size,
+        .offset = pc_descs->offset,
+    };
+
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     VkPipelineLayout pipeline_layout;
     pipeline_layout_info.sType                      = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount             = 0;
-    pipeline_layout_info.pSetLayouts                = nullptr;
-    pipeline_layout_info.pushConstantRangeCount     = 0;
-    pipeline_layout_info.pPushConstantRanges        = nullptr;
-    VK_TRY(vkCreatePipelineLayout(dev->ctx.logical_device, &pipeline_layout_info, nullptr, &pipeline_layout));
+    pipeline_layout_info.pSetLayouts                = NULL;
+    pipeline_layout_info.pushConstantRangeCount     = desc->layout->push_constant_count;
+    pipeline_layout_info.pPushConstantRanges        = &push_range;
+    VK_TRY(vkCreatePipelineLayout(dev->ctx.logical_device, &pipeline_layout_info, NULL, &pipeline_layout));
     pipeline->layout = pipeline_layout;
 
     VkGraphicsPipelineCreateInfo pipeline_info = {0};
@@ -155,7 +164,7 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     pipeline_info.pViewportState               = &viewport_state;
     pipeline_info.pRasterizationState          = &rasterizer;
     pipeline_info.pMultisampleState            = &multisampling;
-    pipeline_info.pDepthStencilState           = nullptr;
+    pipeline_info.pDepthStencilState           = NULL;
     pipeline_info.pColorBlendState             = &color_blend;
     pipeline_info.pDynamicState                = &dynamic;
     pipeline_info.layout                       = pipeline_layout;
@@ -163,10 +172,10 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     pipeline_info.subpass                      = 0;
     pipeline_info.basePipelineHandle           = VK_NULL_HANDLE;
     pipeline_info.basePipelineIndex            = -1;
-    VK_TRY(vkCreateGraphicsPipelines(dev->ctx.logical_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline->handle));
+    VK_TRY(vkCreateGraphicsPipelines(dev->ctx.logical_device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline->handle));
     *out = pipeline;
-    vkDestroyShaderModule(dev->ctx.logical_device, vert_shader, nullptr);
-    vkDestroyShaderModule(dev->ctx.logical_device, frag_shader, nullptr);
+    dev->graphics_pipeline = pipeline;
+    vkDestroyShaderModule(dev->ctx.logical_device, vert_shader, NULL);
+    vkDestroyShaderModule(dev->ctx.logical_device, frag_shader, NULL);
     return RESULT_OK;
 }
-

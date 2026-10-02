@@ -34,7 +34,7 @@ alloc(uint32_t size) {
 Result
 read_file(const char *filename, const char *flags, Array(char) *da) {
     FILE *shader_source = fopen(filename, flags);
-    char *buffer = nullptr;
+    char *buffer = NULL;
 
     if (!shader_source) {
         fprintf(stderr, "Error: failed to open file '%s': %s\n", filename, strerror(errno));

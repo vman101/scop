@@ -1,6 +1,6 @@
 #include <core/result.h>
 
-[[maybe_unused]] static inline const char *result_str(Result r) {
+[[maybe_unused]] static const char *result_str(Result r) {
     static const char *names[] = {
 #define X(name) #name,
         RESULT_LIST(X)
@@ -29,7 +29,6 @@
         fprintf(stderr, "  %s failed (%s)\n    at %s:%d\n", #call, result_str(r_), __FILE__, __LINE__); \
         return (r_); \
     } } while (0)
-
 
 #define TRY_GOTO(r, label, call) do { \
     (r) = (int)(call); \

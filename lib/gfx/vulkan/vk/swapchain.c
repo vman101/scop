@@ -74,13 +74,13 @@ vulkan_swapchain_support_query(VkPhysicalDevice device, VkSurfaceKHR surface, Sw
     VK_TRY(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details->capabilities));
 
     uint32_t format_count = 0;
-    VK_TRY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, nullptr));
+    VK_TRY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, NULL));
     TRY(tda_create(&details->formats, format_count));
     VK_TRY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, tda_data(&details->formats)));
     tda_size(&details->formats) = format_count;
 
     uint32_t present_mode_count = 0;
-    VK_TRY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, nullptr));
+    VK_TRY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, NULL));
     TRY(tda_create(&details->present_modes, present_mode_count));
     VK_TRY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, tda_data(&details->present_modes)));
     tda_size(&details->present_modes) = present_mode_count;
@@ -127,7 +127,7 @@ vulkan_swapchain_info_create(
     } else {
         swapchain_info->imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         swapchain_info->queueFamilyIndexCount = 0;
-        swapchain_info->pQueueFamilyIndices = nullptr;
+        swapchain_info->pQueueFamilyIndices = NULL;
     }
 
     swapchain_info->preTransform = details.capabilities.currentTransform;
@@ -168,7 +168,7 @@ vulkan_swapchain_image_view_create(
     create.subresourceRange.baseArrayLayer = 0;
     create.subresourceRange.layerCount = 1;
 
-    VK_TRY(vkCreateImageView(log_dev, &create, nullptr, image_view));
+    VK_TRY(vkCreateImageView(log_dev, &create, NULL, image_view));
 
     return RESULT_OK;
 }

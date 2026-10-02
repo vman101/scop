@@ -12,7 +12,7 @@ block_try_alloc(GpuBlock *block, uint64_t size, uint64_t align, GpuAllocation *o
     *out = (GpuAllocation){
         .memory = block->device_mem,
         .offset = offset,
-        .mapped = block->mapped ? (uint8_t *)block->mapped + offset : nullptr,
+        .mapped = block->mapped ? (uint8_t *)block->mapped + offset : NULL,
     };
     return true;
 }
@@ -23,7 +23,7 @@ gfx_pool_for(GfxDevice dev, GfxMemoryKind kind) {
         case GFX_MEMORY_GPU:    return &dev->pool_gpu;
         case GFX_MEMORY_UPLOAD: return &dev->pool_upload;
         default:
-            return nullptr;
+            return NULL;
     }
 }
 
@@ -37,7 +37,7 @@ gfx_memory_block_add(GfxDevice dev, GpuPool *pool) {
         .memoryTypeIndex = pool->memory_type_index,
         .allocationSize = pool->block_size,
     };
-    VK_TRY(vkAllocateMemory(dev->ctx.logical_device, &info, nullptr, &block.device_mem));
+    VK_TRY(vkAllocateMemory(dev->ctx.logical_device, &info, NULL, &block.device_mem));
     if (pool->host_visible) {
         VK_TRY_GOTO(r, fail, vkMapMemory(dev->ctx.logical_device, block.device_mem, 0, VK_WHOLE_SIZE, 0, &block.mapped));
     }
@@ -46,7 +46,7 @@ gfx_memory_block_add(GfxDevice dev, GpuPool *pool) {
 
     return RESULT_OK;
 fail:
-    vkFreeMemory(dev->ctx.logical_device, block.device_mem, nullptr);
+    vkFreeMemory(dev->ctx.logical_device, block.device_mem, NULL);
     return r;
 }
 
@@ -67,7 +67,7 @@ gfx_device_memory_request(GfxDevice dev, GfxMemoryKind mem_kind, uint64_t size, 
     }
 
     TRY(gfx_memory_block_add(dev, pool));
-    GpuBlock *fresh = tda_at(&pool->blocks, tda_size(&pool->blocks) - 1);
+    GpuBlock *fresh = tda_at_safe(&pool->blocks, tda_size(&pool->blocks) - 1);
     return block_try_alloc(fresh, size, align, out) ? RESULT_OK : RESULT_OUT_OF_SPACE;
 }
 

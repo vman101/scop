@@ -25,7 +25,7 @@ vulkan_framebuffers_create(
         fb_info.width                   = extent.width;
         fb_info.height                  = extent.height;
         fb_info.layers                  = 1;
-        VK_TRY(vkCreateFramebuffer(device, &fb_info, nullptr, tda_at(fbs, i)));
+        VK_TRY(vkCreateFramebuffer(device, &fb_info, NULL, tda_at(fbs, i)));
         tda_size(fbs)++;
     }
     return RESULT_OK;

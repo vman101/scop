@@ -1,6 +1,6 @@
 #include "asset.h"
 
-void asset_obj_debug_print_vec3_arr(const char *title, Array(Vec3) *position) {
+void asset_debug_print_vec3_arr(const char *title, Array(Vec3) *position) {
     printf("%s\n", title);
     for (size_t i = 0; i < tda_size(position); ++i) {
         Vec3 pos = *tda_at(position, i);
@@ -8,7 +8,7 @@ void asset_obj_debug_print_vec3_arr(const char *title, Array(Vec3) *position) {
     }
 }
 
-void asset_obj_debug_print_index_arr(const char *title, Array(AssetObjIndex) *indices) {
+void asset_debug_print_index_arr(const char *title, Array(AssetObjIndex) *indices) {
     printf("%s\n", title);
     for (size_t i = 0; i < tda_size(indices); ++i) {
         AssetObjIndex index = *tda_at(indices, i);
@@ -28,7 +28,7 @@ void asset_debug_print_uint32_t(const char *title, uint32_t u) {
     printf("  %s: %u\n", title, u);
 }
 
-void asset_debug_mtl_print(AssetMaterial *mtl) {
+void asset_debug_print_mtl(AssetMtl *mtl) {
     printf("mtl %s\n", mtl->name);
     asset_debug_print_vector3("Ka", mtl->ambient);
     asset_debug_print_vector3("Kd", mtl->diffuse);

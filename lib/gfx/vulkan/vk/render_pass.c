@@ -44,7 +44,7 @@ vulkan_render_pass_create(VkDevice device, const VkFormat *swap_chain_image_form
     render_pass_info.dependencyCount = 1;
     render_pass_info.pDependencies = &dependency;
 
-    VK_TRY(vkCreateRenderPass(device, &render_pass_info, nullptr, render_pass));
+    VK_TRY(vkCreateRenderPass(device, &render_pass_info, NULL, render_pass));
 
     return RESULT_OK;
 }

@@ -12,7 +12,7 @@ vulkan_command_pool_create(VkDevice device, uint32_t family_index, VkCommandPool
     pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     pool_info.queueFamilyIndex = family_index;
 
-    VK_TRY(vkCreateCommandPool(device, &pool_info, nullptr, command_pool));
+    VK_TRY(vkCreateCommandPool(device, &pool_info, NULL, command_pool));
 
     return RESULT_OK;
 }

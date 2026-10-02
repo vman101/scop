@@ -29,7 +29,7 @@ vulkan_debug_messenger_populate(VkDebugUtilsMessengerCreateInfoEXT *create_info)
         | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
         | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     create_info->pfnUserCallback = debugCallback;
-    create_info->pUserData = nullptr;
+    create_info->pUserData = NULL;
 
 }
 
@@ -45,7 +45,7 @@ vulkan_debug_messenger_create(
             "vkCreateDebugUtilsMessengerEXT"
         );
     if (func) {
-        VK_TRY(func(instance, create_info, nullptr, messenger));
+        VK_TRY(func(instance, create_info, NULL, messenger));
     } else {
         return RESULT_ERR_VULKAN;
     }
@@ -62,21 +62,21 @@ vulkan_debug_messenger_destroy(VkInstance instance, VkDebugUtilsMessengerEXT mes
         );
 
     if (func) {
-        func(instance, mes, nullptr);
+        func(instance, mes, NULL);
     }
 }
 
 void
 vulkan_instance_destroy(VkInstance instance) {
-    vkDestroyInstance(instance, nullptr);
+    vkDestroyInstance(instance, NULL);
 }
 
 Result
 vulkan_validation_layers_check(const char *validation_layers[], const uint32_t layer_count) {
     uint32_t available_count = 0;
-    VkLayerProperties *layer_properties = nullptr;
+    VkLayerProperties *layer_properties = NULL;
 
-    VK_TRY(vkEnumerateInstanceLayerProperties(&available_count, nullptr));
+    VK_TRY(vkEnumerateInstanceLayerProperties(&available_count, NULL));
     layer_properties = alloc(sizeof(*layer_properties) * available_count);
     if (!layer_properties) { return RESULT_ERR_ALLOC; }
 

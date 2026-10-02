@@ -11,7 +11,7 @@ vulkan_shader_module_create(VkDevice device, Array(char) *file_buffer, VkShaderM
     info.codeSize = tda_size(file_buffer);
     info.pCode = (uint32_t *)tda_data(file_buffer);
 
-    VK_TRY(vkCreateShaderModule(device, &info, nullptr, module));
+    VK_TRY(vkCreateShaderModule(device, &info, NULL, module));
 
     return RESULT_OK;
 }

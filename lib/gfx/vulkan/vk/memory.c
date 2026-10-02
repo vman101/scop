@@ -34,7 +34,7 @@ vulkan_memory_allocate(VkDevice device, VkPhysicalDevice physical_device, VkMemo
     alloc_info.allocationSize = mem_req.size;
     alloc_info.memoryTypeIndex = mem_type_index;
 
-    VK_TRY(vkAllocateMemory(device, &alloc_info, nullptr, device_memory));
+    VK_TRY(vkAllocateMemory(device, &alloc_info, NULL, device_memory));
 
     return RESULT_OK;
 }
@@ -47,7 +47,7 @@ vulkan_memory_write(
     uint64_t size,
     const void *data
 ) {
-    void *mapped = nullptr;
+    void *mapped = NULL;
     VK_TRY(vkMapMemory(device, memory, offset, size, 0, &mapped));
     memcpy(mapped, data, size);
     vkUnmapMemory(device, memory);
@@ -56,5 +56,5 @@ vulkan_memory_write(
 
 void
 vulkan_memory_free(VkDevice device, VkDeviceMemory memory) {
-    vkFreeMemory(device, memory, nullptr);
+    vkFreeMemory(device, memory, NULL);
 }

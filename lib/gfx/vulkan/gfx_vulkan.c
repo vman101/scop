@@ -53,10 +53,10 @@ gfx_vulkan_context_init(GfxDevice_T *dev, VkContextCreateInfo *ctx_info) {
     create_info.ppEnabledLayerNames = ctx_info->validation_layers;
     TRY(vulkan_validation_layers_check(ctx_info->validation_layers, ctx_info->layers_count));
 
-    uint32_t ws_mask = {0};
+    uint32_t ws_mask          = {0};
     Array(CharPtr) extensions = {0};
-    char **extout = {0};
-    uint32_t count = {0};
+    char **extout             = {0};
+    uint32_t count            = {0};
     if (window) {
         gfx_platform_surface_instance_extensions_get(&ws_mask, &extout, &count);
     }
@@ -76,7 +76,7 @@ gfx_vulkan_context_init(GfxDevice_T *dev, VkContextCreateInfo *ctx_info) {
     create_info.enabledLayerCount       = ctx_info->layers_count;
     create_info.ppEnabledLayerNames     = ctx_info->validation_layers;
 
-    VK_TRY(vkCreateInstance(&create_info, nullptr, &ctx->instance));
+    VK_TRY(vkCreateInstance(&create_info, NULL, &ctx->instance));
 
     if (dev->debug_mode) {
         TRY(vulkan_debug_messenger_create(ctx->instance, &debug_mes_info, &ctx->messenger));
@@ -119,45 +119,45 @@ gfx_device_destroy(GfxDevice_T *dev) {
     VkContext *ctx = &dev->ctx;
     vkDeviceWaitIdle(ctx->logical_device);
     vulkan_debug_messenger_destroy(ctx->instance, ctx->messenger);
-    // vkDestroySemaphore(dev->ctx.logical_device, dev->image_available_semaphore, nullptr);
-    // vkDestroySemaphore(dev->ctx.logical_device, dev->render_finished_semaphore, nullptr);
-    // vkDestroyFence(dev->ctx.logical_device, dev->in_flight_fence, nullptr);
-    vkDestroyCommandPool(ctx->logical_device, dev->command_pool, nullptr);
+    // vkDestroySemaphore(dev->ctx.logical_device, dev->image_available_semaphore, NULL);
+    // vkDestroySemaphore(dev->ctx.logical_device, dev->render_finished_semaphore, NULL);
+    // vkDestroyFence(dev->ctx.logical_device, dev->in_flight_fence, NULL);
+    vkDestroyCommandPool(ctx->logical_device, dev->command_pool, NULL);
     // for (size_T i = 0; i < tda_size(&dev->buffers); i++) {
-    //     vkDestroyBuffer(dev->ctx.logical_device, *tda_at(&dev->buffers, i), nullptr);
+    //     vkDestroyBuffer(dev->ctx.logical_device, *tda_at(&dev->buffers, i), NULL);
     // }
     // for (size_t i = 0; i < tda_size(&dev->device_memory); i++) {
-    //     vkFreeMemory(ctx->logical_device, *tda_at(&dev->device_memory, i), nullptr);
+    //     vkFreeMemory(ctx->logical_device, *tda_at(&dev->device_memory, i), NULL);
     // }
     for (size_t i = 0; i < tda_size(&dev->swapchain.framebuffers); i++) {
-        vkDestroyFramebuffer(ctx->logical_device, *tda_at(&dev->swapchain.framebuffers, i), nullptr);
+        vkDestroyFramebuffer(ctx->logical_device, *tda_at(&dev->swapchain.framebuffers, i), NULL);
     }
     for (size_t i = 0; i < tda_size(&dev->swapchain.image_views); i++) {
-        vkDestroyImageView(ctx->logical_device, *tda_at(&dev->swapchain.image_views, i), nullptr);
+        vkDestroyImageView(ctx->logical_device, *tda_at(&dev->swapchain.image_views, i), NULL);
     }
     // tda_destroy(&dev->buffers);
     tda_destroy(&dev->swapchain.framebuffers);
     tda_destroy(&dev->swapchain.image_views);
     tda_destroy(&dev->swapchain.images);
-    vkDestroyRenderPass(ctx->logical_device, dev->render_pass, nullptr);
-    vkDestroySwapchainKHR(ctx->logical_device, dev->swapchain.handle, nullptr);
-    vkDestroyDevice(ctx->logical_device, nullptr);
-    vkDestroySurfaceKHR(ctx->instance, ctx->surface, nullptr);
-    vkDestroyInstance(ctx->instance, nullptr);
+    vkDestroyRenderPass(ctx->logical_device, dev->render_pass, NULL);
+    vkDestroySwapchainKHR(ctx->logical_device, dev->swapchain.handle, NULL);
+    vkDestroyDevice(ctx->logical_device, NULL);
+    vkDestroySurfaceKHR(ctx->instance, ctx->surface, NULL);
+    vkDestroyInstance(ctx->instance, NULL);
 }
 
 void
 gfx_pipeline_destroy(GfxDevice dev, GfxPipeline pipeline) {
-    vkDestroyPipeline(dev->ctx.logical_device, pipeline->handle, nullptr);
-    vkDestroyPipelineLayout(dev->ctx.logical_device, pipeline->layout, nullptr);
+    vkDestroyPipeline(dev->ctx.logical_device, pipeline->handle, NULL);
+    vkDestroyPipelineLayout(dev->ctx.logical_device, pipeline->layout, NULL);
 }
 
 Result
 gfx_device_create(GfxDeviceDesc *dev_info, GfxDevice_T **device) {
     Result r = RESULT_OK;
-    assert(device != nullptr);
-    assert(*device == nullptr);
-    assert(dev_info != nullptr);
+    assert(device != NULL);
+    assert(*device == NULL);
+    assert(dev_info != NULL);
 
     GfxDevice_T *dev = alloc(sizeof(*dev));
     dev->debug_mode = dev_info->debug_mode;

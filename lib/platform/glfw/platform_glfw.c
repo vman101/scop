@@ -16,7 +16,7 @@
 
 struct PlatformWindow_T {
     GLFWwindow                          *handle;
-    PlatformWindowResizeCallbackFunc    func;
+    PlatformWindowResizeCallbackFunc    resize_func;
     void                                *user_data;
     bool                                should_close;
 };
@@ -40,6 +40,14 @@ void    platform_event_poll(PlatformWindow window) {
 
 static int platform_key_to_glfw(int key) {
     switch (key) {
+        case PLATFORM_KEY_A:
+            return GLFW_KEY_A;
+        case PLATFORM_KEY_S:
+            return GLFW_KEY_S;
+        case PLATFORM_KEY_D:
+            return GLFW_KEY_D;
+        case PLATFORM_KEY_W:
+            return GLFW_KEY_W;
         default:
             return GLFW_KEY_ESCAPE;
     }
@@ -75,7 +83,7 @@ platform_window_init(
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-    GLFWwindow *new_win = glfwCreateWindow((int32_t)width, (int32_t)height, title, nullptr, nullptr);
+    GLFWwindow *new_win = glfwCreateWindow((int32_t)width, (int32_t)height, title, NULL, NULL);
     if (!new_win) {
         fprintf(stderr, "glfwCreateWindow failed\n");
         glfwTerminate();
@@ -90,25 +98,25 @@ platform_window_init(
 void
 platform_window_destroy(PlatformWindow window) {
     glfwDestroyWindow(window->handle);
-    window->handle = nullptr;
+    window->handle = NULL;
 }
 
 void
 platform_window_resize_callback_internal(GLFWwindow *window, int32_t width, int32_t height) {
     PlatformWindow_T *platform_window = glfwGetWindowUserPointer(window);
-    platform_window->func(platform_window->user_data, width, height);
+    platform_window->resize_func(platform_window->user_data, width, height);
 }
 
 void
 platform_window_resize_callback_set(PlatformWindow window, PlatformWindowResizeCallbackFunc func, void *user_data) {
-    window->func = func;
+    window->resize_func = func;
     window->user_data = user_data;
     glfwSetWindowUserPointer(window->handle, window);
     glfwSetFramebufferSizeCallback(window->handle, platform_window_resize_callback_internal);
 }
 
 void
-platform_framebuffer_size_func(PlatformWindow window, int32_t *width, int32_t *height) {
+platform_framebuffer_size_get(PlatformWindow window, int32_t *width, int32_t *height) {
     glfwGetFramebufferSize(window->handle, width, height);
 }
 
@@ -125,10 +133,10 @@ platform_native_window_get(PlatformWindow window) {
 #ifdef _WIN32
     n.type = PLATFORM_WS_WIN32;
     n.win32 = glfwGetWin32Window(window->handle);
-#elifdef __APPLE__
+#elif defined(__APPLE__)
     n.type = PLATFORM_WS_COCOA;
     n.cocoa = glfwGetCocoaWindow(window->handle);
-#elifdef __linux__
+#elif defined(__linux__)
     switch (glfwGetPlatform()) {
         case GLFW_PLATFORM_WAYLAND:
             n.type = PLATFORM_WS_WAYLAND;

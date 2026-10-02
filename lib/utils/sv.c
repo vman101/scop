@@ -4,8 +4,23 @@
 #include <stdlib.h>
 #include <string.h>
 
+void sv_print(StringView s) {
+    printf("%.*s", (int)s.len, s.data);
+}
+
 bool sv_eq(StringView a, StringView b) {
     return a.len == b.len && memcmp(a.data, b.data, a.len) == 0;
+}
+
+StringView sv_from_str(const char *str) {
+    return (StringView){ str, strlen(str) };
+}
+
+StringView sv_trim_right(StringView s) {
+    while (s.len && isspace((unsigned char)s.data[s.len - 1])) {
+        s.len--;
+    }
+    return s;
 }
 
 StringView sv_trim_left(StringView s) {
@@ -16,7 +31,11 @@ StringView sv_trim_left(StringView s) {
     return s;
 }
 
-StringView sv_chop_by_delim(StringView *s, char delim) {
+StringView sv_trim(StringView s) {
+    return sv_trim_left(sv_trim_right(s));
+}
+
+StringView sv_chop(StringView *s, char delim) {
     size_t i = 0;
     while (i < s->len && s->data[i] != delim) {
         i++;
@@ -28,8 +47,18 @@ StringView sv_chop_by_delim(StringView *s, char delim) {
     return head;
 }
 
-void sv_print(StringView s) {
-    printf("%.*s", (int)s.len, s.data);
+StringView sv_chop_last(StringView *s, char delim) {
+    size_t i = s->len;
+    while (i > 0 && s->data[i - 1] != delim) {
+        i--;
+    }
+    if (i == 0) {                       /* not found */
+        return (StringView){ s->data, 0 };
+    }
+    StringView head = { s->data, i - 1 };
+    s->data += i;
+    s->len  -= i;
+    return head;
 }
 
 Result sv_to_float(StringView s, float *out) {
@@ -56,3 +85,7 @@ Result sv_to_long(StringView s, int32_t *out) {
     return (end == (buf + s.len)) ? RESULT_OK : RESULT_ERR_PARSE_FLOAT;
 }
 
+void sv_strcopy(StringView s, char *out) {
+    memcpy(out, s.data, s.len);
+    out[s.len] = '\0';
+}

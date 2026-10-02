@@ -1,0 +1,3 @@
+[submodule "external/interface"]
+	path = external/interface
+	url = git@github.com:vman101/engine

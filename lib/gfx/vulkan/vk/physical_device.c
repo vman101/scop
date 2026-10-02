@@ -12,11 +12,11 @@ vulkan_device_find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface)
         .present_family = QUEUE_NONE,
         .graphics_family = QUEUE_NONE,
     };
-    VkQueueFamilyProperties *queue_props = nullptr;
+    VkQueueFamilyProperties *queue_props = NULL;
 
     uint32_t count = 0;
 
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, NULL);
     queue_props = alloc(sizeof(*queue_props) * count);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &count, queue_props);
 
@@ -37,10 +37,10 @@ vulkan_device_find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface)
 }
 
 Result vulkan_check_device_extension_support(VkPhysicalDevice device, Array(CharPtr) *device_extensions) {
-    size_t device_extensions_len = tda_size(device_extensions);
-    uint32_t count = 0;
+    size_t device_extensions_len            = tda_size(device_extensions);
+    uint32_t count                          = {0};
     Array(VkExtensionProperties) extentions = {0};
-    Result res = RESULT_ERR_VULKAN;
+    Result res                              = RESULT_ERR_VULKAN;
 
     VK_TRY(vkEnumerateDeviceExtensionProperties(device, NULL, &count, NULL));
     if (count == 0) {
@@ -106,7 +106,7 @@ Result
 vulkan_device_pick(VkInstance instance, VkSurfaceKHR surface, Array(CharPtr) *device_extensions, VkPhysicalDevice *device) {
     uint32_t device_count = 0;
 
-    VK_TRY(vkEnumeratePhysicalDevices(instance, &device_count, nullptr));
+    VK_TRY(vkEnumeratePhysicalDevices(instance, &device_count, NULL));
     if (device_count == 0) {
         fprintf(stderr, "No vulkan devices found\n");
         return RESULT_ERR_VULKAN;

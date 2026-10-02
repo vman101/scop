@@ -31,6 +31,6 @@ vulkan_buffer_memory_requirements_get(VkDevice device, VkBuffer buffer) {
 
 Result
 vulkan_buffer_create(VkDevice device, VkBufferCreateInfo *buffer_info, VkBuffer *buffer) {
-    VK_TRY(vkCreateBuffer(device, buffer_info, nullptr, buffer));
+    VK_TRY(vkCreateBuffer(device, buffer_info, NULL, buffer));
     return RESULT_OK;
 }

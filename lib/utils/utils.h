@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core/result.h"
 #include <stdint.h>
 #include "da.h"

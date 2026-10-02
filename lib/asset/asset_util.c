@@ -4,14 +4,14 @@
 #include <string.h>
 #include <utils/utils.h>
 
-Result
+static Result
 asset_parse_vector(StringView line, AssetParseDebugTracker *tracker, uint32_t vec_len, OutVec *out) {
     float values[3]       = {0};
     const char *start_pos = line.data;
     size_t i              = 0;
 
     for (; i < vec_len && line.len; i++) {
-        StringView tok  = sv_trim_left(sv_chop_by_delim(&line, ' '));
+        StringView tok  = sv_trim_left(sv_chop(&line, ' '));
         tracker->cursor = tok.data - start_pos;
         if (sv_empty(&tok)) { continue; }
         TRY(sv_to_float(tok, &values[i]));
@@ -31,9 +31,37 @@ asset_parse_vector(StringView line, AssetParseDebugTracker *tracker, uint32_t ve
     return RESULT_OK;
 }
 
+Result asset_parse_vec2(StringView line, AssetParseDebugTracker *tracker, Vec2 *vec) {
+    OutVec v;
+    TRY(asset_parse_vector(line, tracker, 2, &v));
+    *vec = v.v2;
+    return RESULT_OK;
+}
+
+Result asset_parse_vec3(StringView line, AssetParseDebugTracker *tracker, Vec3 *vec) {
+    OutVec v;
+    TRY(asset_parse_vector(line, tracker, 3, &v));
+    *vec = v.v3;
+    return RESULT_OK;
+}
+
+Result asset_parse_vec2_into_arr(StringView line, AssetParseDebugTracker *tracker, Array(Vec2) *vec) {
+    OutVec v;
+    TRY(asset_parse_vector(line, tracker, 2, &v));
+    tda_push(vec, &v.v2);
+    return RESULT_OK;
+}
+
+Result asset_parse_vec3_into_arr(StringView line, AssetParseDebugTracker *tracker, Array(Vec3) *vec) {
+    OutVec v;
+    TRY(asset_parse_vector(line, tracker, 3, &v));
+    tda_push(vec, &v.v3);
+    return RESULT_OK;
+}
+
 Result
 asset_parse_uint32_t(StringView line, AssetParseDebugTracker *tracker, uint32_t *out) {
-    StringView token = sv_chop_by_delim(&line, ' ');
+    StringView token = sv_chop(&line, ' ');
     sv_print(line);
     tracker->cursor += line.data - token.data;
     TRY(sv_to_long(token, (int32_t *)out));
@@ -41,9 +69,18 @@ asset_parse_uint32_t(StringView line, AssetParseDebugTracker *tracker, uint32_t 
 }
 
 Result
+asset_parse_float(StringView line, AssetParseDebugTracker *tracker, float *out) {
+    StringView token = sv_chop(&line, ' ');
+    sv_print(line);
+    tracker->cursor += line.data - token.data;
+    TRY(sv_to_float(token, (float *)out));
+    return RESULT_OK;
+}
+
+Result
 asset_parse_string(StringView line, AssetParseDebugTracker *tracker, char out[64]) {
     (void)tracker;
-    StringView eol = sv_trim_left(sv_chop_by_delim(&line, ' '));
+    StringView eol = sv_trim_left(sv_chop(&line, ' '));
     memcpy(out, eol.data, eol.len);
     return RESULT_OK;
 }

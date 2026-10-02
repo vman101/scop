@@ -96,6 +96,7 @@ struct GfxDevice_T {
     GpuPool         pool_gpu;
     GpuPool         pool_upload;
     uint32_t        current_frame;
+    GfxPipeline     graphics_pipeline;
     GfxFrame_T      frame;
     uint32_t        width;
     uint32_t        height;

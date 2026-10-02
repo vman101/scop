@@ -34,10 +34,10 @@ gfx_swapchain_init(GfxDevice_T *dev, uint32_t width, uint32_t height) {
         &dev->swapchain.image_format,
         &dev->swapchain.extent
     ));
-    VK_TRY(vkCreateSwapchainKHR(ctx->logical_device, &swapchain_info, nullptr, &swapchain->handle));
+    VK_TRY(vkCreateSwapchainKHR(ctx->logical_device, &swapchain_info, NULL, &swapchain->handle));
 
     uint32_t image_count = 0;
-    VK_TRY(vkGetSwapchainImagesKHR(ctx->logical_device, swapchain->handle, &image_count, nullptr));
+    VK_TRY(vkGetSwapchainImagesKHR(ctx->logical_device, swapchain->handle, &image_count, NULL));
     TRY(tda_create(&swapchain->images, image_count));
     VK_TRY(vkGetSwapchainImagesKHR(
         ctx->logical_device,
@@ -60,13 +60,13 @@ gfx_swapchain_destroy(GfxDevice_T *dev) {
     Swapchain *swapchain = &dev->swapchain;
 
     for (size_t i = 0; i < tda_size(&swapchain->framebuffers); i++) {
-        vkDestroyFramebuffer(device, *tda_at(&swapchain->framebuffers, i), nullptr);
+        vkDestroyFramebuffer(device, *tda_at(&swapchain->framebuffers, i), NULL);
     }
     for (size_t i = 0; i < tda_size(&swapchain->image_views); i++) {
-        vkDestroyImageView(device, *tda_at(&swapchain->image_views, i), nullptr);
+        vkDestroyImageView(device, *tda_at(&swapchain->image_views, i), NULL);
     }
     for (size_t i = 0; i < tda_size(&swapchain->render_finished); i++) {
-        vkDestroySemaphore(device, *tda_at(&swapchain->render_finished, i), nullptr);
+        vkDestroySemaphore(device, *tda_at(&swapchain->render_finished, i), NULL);
     }
 
 
@@ -76,7 +76,7 @@ gfx_swapchain_destroy(GfxDevice_T *dev) {
     tda_destroy(&swapchain->render_finished);
 
     if (swapchain->handle) {
-        vkDestroySwapchainKHR(device, swapchain->handle, nullptr);
+        vkDestroySwapchainKHR(device, swapchain->handle, NULL);
     }
     swapchain->handle = VK_NULL_HANDLE;
 }

@@ -1,8 +1,19 @@
+#include "core/math.h"
 #include "interface/gfx.h"
 #include "gfx_vulkan_internal.h"
 #include <vulkan/vulkan_core.h>
 #include <utils/utils.h>
 #include <utils/result_tools.h>
+
+void
+gfx_push_constant_float(GfxFrame frame, float f) {
+    vkCmdPushConstants(frame->cmd, frame->dev->graphics_pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float), &f);
+}
+
+void
+gfx_push_constant_mat4(GfxFrame frame, Mat4 m) {
+    vkCmdPushConstants(frame->cmd, frame->dev->graphics_pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(m), &m);
+}
 
 Result
 gfx_frame_begin(GfxDevice dev, GfxFrame *out) {
@@ -13,7 +24,7 @@ gfx_frame_begin(GfxDevice dev, GfxFrame *out) {
         }
     }
 
-    *out = nullptr;
+    *out = NULL;
     FrameData *fd = &dev->frames[dev->current_frame];
     VkDevice device = dev->ctx.logical_device;
 
@@ -66,7 +77,7 @@ gfx_pass_begin(GfxFrame frame, const float clear[4]) {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = dev->render_pass,
         .renderArea = { .extent = extent},
-        .framebuffer = *(VkFramebuffer *)tda_at(&dev->swapchain.framebuffers, frame->image_index),
+        .framebuffer = *(VkFramebuffer *)tda_at_safe(&dev->swapchain.framebuffers, frame->image_index),
         .clearValueCount = 1,
         .pClearValues = &clear_value,
     };
@@ -117,7 +128,7 @@ gfx_frame_end(GfxFrame frame) {
     FrameData *fd = frame->data;
 
     VK_TRY(vkEndCommandBuffer(frame->cmd));
-    VkSemaphore *render_finished = tda_at(&dev->swapchain.render_finished, frame->image_index);
+    VkSemaphore *render_finished = tda_at_safe(&dev->swapchain.render_finished, frame->image_index);
     VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
