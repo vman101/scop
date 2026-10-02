@@ -1,4 +1,5 @@
 #include "interface/mage_result.h"
+#include "utils/da.h"
 #include "utils/sv.h"
 #include <utils/array_types.h>
 #include <stdint.h>
@@ -37,7 +38,7 @@ Result asset_obj_parse_face_field(StringView field, AssetParseDebugTracker *trac
     while (s.len) {
         for (size_t i = 0; i < 3; i++) {
             StringView tok = sv_trim_left(sv_chop(&s, '/'));
-            tracker->cursor = tok.data - start_pos;
+            asset_debug_parser_tracker_cursor_advance(tracker, tok.data - start_pos);
             if (sv_empty(&tok)) { continue; }
             TRY(sv_to_long(tok, &values[i]));
         }
@@ -98,15 +99,16 @@ Result asset_obj_parse_and_load_mtllib(StringView line, AssetParseDebugTracker *
 Result asset_obj_parse_use_mtl(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
     char mtl_name[64] = {0};
     StringView tok = sv_trim_left(sv_chop(&line, ' '));
-    tracker->cursor = line.data - tok.data;
+    asset_debug_parser_tracker_cursor_advance(tracker, line.data - tok.data);
     sv_strcopy(tok, mtl_name);
     AssetObjUseMtl *mtl = tda_back(&obj->use_mtl);
     if (mtl) {
         mtl->count = tda_size(&obj->indices) - mtl->index_start;
     }
     AssetObjUseMtl new_use = {0};
-    for (AssetMtl *mtl = {0}; !tda_ended(&obj->materials); mtl = tda_next(&obj->materials)) {
-        if (strcmp(mtl_name, mtl->name) == 0) {
+    for (size_t i = 0; i < tda_size(&obj->materials); i++) {
+        AssetMtl *mtl  = tda_get(&obj->materials, i);
+        if (mtl && strcmp(mtl_name, mtl->name) == 0) {
             new_use.material = tda_index_of(&obj->materials, mtl);
             new_use.index_start = tda_size(&obj->indices);
         }
@@ -126,11 +128,16 @@ Result asset_obj_file_load(const char *filename, AssetParseDebugTracker *tracker
     StringView path = sv_chop_last(&sv_filename, '/');
     sv_strcopy(path, out->path);
 
+    AssetObjGroup group = {0};
+    sv_strcopy(sv_filename, group.name);
+    group.first_index = 0;
+    tda_push(&out->groups, &group);
+
     while (file.len) {
-        tracker->line++;
+        asset_debug_parser_tracker_line_advance(tracker, 1);
         StringView line   = sv_trim_left(sv_chop(&file, '\n'));
         if (sv_empty(&line) || line.data[0] == '#') { continue; }
-        StringView token = sv_chop(&line, ' ');
+        StringView token  = sv_chop(&line, ' ');
 
         line = sv_trim_left(line);
         AssetObjEntryType type = asset_entry_type_get(token, entry_types_sv, (int *)entry_types_ls, ARRAY_LEN(entry_types_sv));
@@ -171,6 +178,12 @@ fail:
         AssetObjUseMtl *back = tda_back(&out->use_mtl);
         if (back && back->index_start < tda_size(&out->indices) && back->count == 0) {
             back->count = tda_size(&out->indices) - back->index_start;
+        }
+        for (size_t i = 0; i < tda_size(&out->groups); i++) {
+            AssetObjGroup *cur = tda_get(&out->groups, i);
+            if (cur && cur->index_count == 0) {
+                tda_remove(&out->groups, i);
+            }
         }
         asset_obj_group_close(out);
     }

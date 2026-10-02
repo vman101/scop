@@ -1,5 +1,20 @@
 #include "asset.h"
 
+void
+asset_debug_parser_tracker_line_advance(AssetParseDebugTracker *tracker, int32_t adv) {
+    if (tracker) {
+        tracker->line += adv;
+        tracker->cursor = 0;
+    }
+}
+
+void
+asset_debug_parser_tracker_cursor_advance(AssetParseDebugTracker *tracker, ptrdiff_t adv) {
+    if (tracker) {
+        tracker->cursor += adv;
+    }
+}
+
 void asset_debug_print_vec3_arr(const char *title, Array(Vec3) *position) {
     printf("%s\n", title);
     for (size_t i = 0; i < tda_size(position); ++i) {
@@ -45,5 +60,7 @@ void asset_debug_print_invalid_token(const char *filename, AssetParseDebugTracke
     printf("Invalid token: ");
     sv_print(token);
     printf("\t-> %s \n", entry_names[type]);
-    printf("  at %s\t%u:%u\n", filename, tracker->line, tracker->cursor);
+    if (tracker) {
+        printf("  at %s\t%u:%u\n", filename, tracker->line, tracker->cursor);
+    }
 }

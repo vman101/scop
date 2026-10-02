@@ -12,7 +12,7 @@ asset_parse_vector(StringView line, AssetParseDebugTracker *tracker, uint32_t ve
 
     for (; i < vec_len && line.len; i++) {
         StringView tok  = sv_trim_left(sv_chop(&line, ' '));
-        tracker->cursor = tok.data - start_pos;
+        asset_debug_parser_tracker_cursor_advance(tracker, tok.data - start_pos);
         if (sv_empty(&tok)) { continue; }
         TRY(sv_to_float(tok, &values[i]));
     }
@@ -63,7 +63,7 @@ Result
 asset_parse_uint32_t(StringView line, AssetParseDebugTracker *tracker, uint32_t *out) {
     StringView token = sv_chop(&line, ' ');
     sv_print(line);
-    tracker->cursor += line.data - token.data;
+    asset_debug_parser_tracker_cursor_advance(tracker, line.data - token.data);
     TRY(sv_to_long(token, (int32_t *)out));
     return RESULT_OK;
 }
@@ -72,7 +72,7 @@ Result
 asset_parse_float(StringView line, AssetParseDebugTracker *tracker, float *out) {
     StringView token = sv_chop(&line, ' ');
     sv_print(line);
-    tracker->cursor += line.data - token.data;
+    asset_debug_parser_tracker_cursor_advance(tracker, line.data - token.data);
     TRY(sv_to_float(token, (float *)out));
     return RESULT_OK;
 }

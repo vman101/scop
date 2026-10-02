@@ -44,19 +44,12 @@
 #define tda_back(a) \
     tda_get((a), (tda_size((a)) - (tda_size((a)) > 0)))
 
-#define tda_next(a) \
-    tda_get((a), (a)->da.cursor++)
-
-#define tda_ended(a) \
-    ((a)->da.cursor == (a)->da.size)
-#define tda_cursor(a) \
-    ((a)->da.cursor)
-#define tda_reset(a) \
-    ((a)->da.cursor = 0)
-
 #define tda_index_of(a, mem) \
     ((mem) >= tda_data(a) && (mem) < tda_data(a) + tda_size(a) \
         ? (ptrdiff_t)((mem) - tda_data(a)) : (ptrdiff_t)-1)
+
+#define tda_remove(a, idx) \
+    da_remove_index(&(a)->da, (idx))
 
 
 typedef struct {
@@ -64,7 +57,6 @@ typedef struct {
     size_t      member_size;
     size_t      cap;
     size_t      size;
-    uint64_t    cursor;
 } DynamicArray;
 _Static_assert(offsetof(DynamicArray, data) == 0, "data must be first");
 typedef char data_first_check[offsetof(DynamicArray, data) == 0 ? 1 : -1];

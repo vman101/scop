@@ -1,8 +1,18 @@
 #include "gfx_vulkan_internal.h"
+#include "interface/mage_gfx.h"
+#include "utils/da.h"
 #include <utils/result_tools.h>
 #include <utils/utils.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
+
+static VkShaderStageFlags
+gfx_shader_stage_to_vk(GfxShaderStage s) {
+    switch (s) {
+        case GFX_SHADER_STAGE_VERTEX:   return VK_SHADER_STAGE_VERTEX_BIT;
+        case GFX_SHADER_STAGE_FRAGMENT: return VK_SHADER_STAGE_FRAGMENT_BIT;
+    }
+}
 
 // gfx_vulkan.c
 static VkFormat gfx_format_to_vk(GfxFormat f) {
@@ -18,12 +28,26 @@ static VkFormat gfx_format_to_vk(GfxFormat f) {
 
 Result
 gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
-    VkShaderModule vert_shader;
-    VkShaderModule frag_shader;
     GfxPipeline pipeline = alloc(sizeof(*pipeline));
 
-    TRY(vulkan_shader_module_create_from_file(dev->ctx.logical_device, desc->vertex_shader_path, &vert_shader));
-    TRY(vulkan_shader_module_create_from_file(dev->ctx.logical_device, desc->fragment_shader_path, &frag_shader));
+    Array(VkPipelineShaderStageCreateInfo) shader_stages = {0};
+    if (desc->shader_count > 0) {
+        for (size_t i = 0; i < desc->shader_count; i++) {
+            GfxShaderDesc *s_desc = &desc->shaders[i];
+            VkShaderModule shader = {0};
+            TRY(vulkan_shader_module_create(dev->ctx.logical_device, s_desc->code, s_desc->size, &shader));
+
+            VkPipelineShaderStageCreateInfo stage_info;
+            memset(&stage_info, 0, sizeof(stage_info));
+            stage_info.sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            stage_info.stage               = gfx_shader_stage_to_vk(s_desc->stage);
+            stage_info.module              = shader;
+            stage_info.pName               = "main";
+            stage_info.pSpecializationInfo = NULL;
+
+            tda_push(&shader_stages, &stage_info);
+        }
+    }
 
     VkVertexInputBindingDescription bind_desc[GFX_MAX_BINDINGS] = {0};
     VkVertexInputAttributeDescription attr_desc[GFX_MAX_BINDINGS * GFX_MAX_ATTRIBUTES] = {0};
@@ -47,23 +71,6 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
         }
     }
 
-    VkPipelineShaderStageCreateInfo vert_stage_info;
-    memset(&vert_stage_info, 0, sizeof(vert_stage_info));
-    vert_stage_info.sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vert_stage_info.stage               = VK_SHADER_STAGE_VERTEX_BIT;
-    vert_stage_info.module              = vert_shader;
-    vert_stage_info.pName               = "main";
-    vert_stage_info.pSpecializationInfo = NULL;
-
-    VkPipelineShaderStageCreateInfo frag_stage_info;
-    memset(&frag_stage_info, 0, sizeof(frag_stage_info));
-    frag_stage_info.sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    frag_stage_info.stage               = VK_SHADER_STAGE_FRAGMENT_BIT;
-    frag_stage_info.module              = frag_shader;
-    frag_stage_info.pName               = "main";
-    frag_stage_info.pSpecializationInfo = NULL;
-
-    VkPipelineShaderStageCreateInfo shader_stages[]      = { vert_stage_info, frag_stage_info };
     VkPipelineVertexInputStateCreateInfo vert_input_info = {0};
     vert_input_info.sType                                = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vert_input_info.vertexBindingDescriptionCount        = desc->vertex_layout->binding_count;
@@ -92,7 +99,7 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable        = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
+    rasterizer.polygonMode             = VK_POLYGON_MODE_LINE;
     rasterizer.lineWidth               = 1.0F;
     rasterizer.cullMode                = VK_CULL_MODE_NONE;
     rasterizer.frontFace               = VK_FRONT_FACE_CLOCKWISE;
@@ -157,8 +164,8 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
 
     VkGraphicsPipelineCreateInfo pipeline_info = {0};
     pipeline_info.sType                        = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline_info.stageCount                   = 2;
-    pipeline_info.pStages                      = shader_stages;
+    pipeline_info.stageCount                   = tda_size(&shader_stages);
+    pipeline_info.pStages                      = tda_data(&shader_stages);
     pipeline_info.pVertexInputState            = &vert_input_info;
     pipeline_info.pInputAssemblyState          = &input_assembly;
     pipeline_info.pViewportState               = &viewport_state;
@@ -175,7 +182,12 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     VK_TRY(vkCreateGraphicsPipelines(dev->ctx.logical_device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline->handle));
     *out = pipeline;
     dev->graphics_pipeline = pipeline;
-    vkDestroyShaderModule(dev->ctx.logical_device, vert_shader, NULL);
-    vkDestroyShaderModule(dev->ctx.logical_device, frag_shader, NULL);
+
+    for (size_t i = 0; i < tda_size(&shader_stages); i++) {
+        VkPipelineShaderStageCreateInfo *stage = tda_get(&shader_stages, i);
+        if (stage) {
+            vkDestroyShaderModule(dev->ctx.logical_device, stage->module, NULL);
+        }
+    }
     return RESULT_OK;
 }

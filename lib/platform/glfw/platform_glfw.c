@@ -48,6 +48,10 @@ static int platform_key_to_glfw(int key) {
             return GLFW_KEY_D;
         case PLATFORM_KEY_W:
             return GLFW_KEY_W;
+        case PLATFORM_KEY_Q:
+            return GLFW_KEY_Q;
+        case PLATFORM_KEY_E:
+            return GLFW_KEY_E;
         default:
             return GLFW_KEY_ESCAPE;
     }

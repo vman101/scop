@@ -21,6 +21,7 @@ VK := 	validation_layers.c logical_device.c \
 		render_pass.c shader.c command.c \
 		sync.c framebuffer.c buffer.c
 RENDERER := renderer.c draw.c
+MESH := mesh.c
 
 PLATFORM_GLFW := platform_glfw.c
 
@@ -32,6 +33,7 @@ GFX_VULKAN := gfx_vulkan.c $(addprefix gfx_vulkan_, \
 
 LIB_SRC    := 	$(addprefix $(LIB_DIR)utils/, $(UTILS)) \
 			$(addprefix $(LIB_DIR)asset/, $(ASSET)) \
+			$(addprefix $(LIB_DIR)mesh/, $(MESH)) \
 			$(addprefix $(LIB_DIR)platform/glfw/, $(PLATFORM_GLFW)) \
 			$(addprefix $(LIB_DIR)gfx/vulkan/, $(GFX_VULKAN)) \
 			$(addprefix $(LIB_DIR)gfx/vulkan/vk/, $(VK))

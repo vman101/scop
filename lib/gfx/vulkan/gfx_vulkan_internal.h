@@ -6,6 +6,7 @@
 #include <utils/allocators.h>
 #include <vulkan/vulkan_core.h>
 #include "interface/mage_native_window.h"
+#include "utils/da.h"
 #include "vk/vk.h"
 
 #define GPU_POOL_GPU_BLOCK_SIZE (512ULL * 1024 * 1024)
@@ -16,6 +17,9 @@ typedef struct GpuBlock GpuBlock;
 
 DECLARE_ARRAY(GpuBlock);
 DECLARE_ARRAY(VkSemaphore);
+DECLARE_ARRAY(VkShaderModule);
+DECLARE_ARRAY(VkPipelineShaderStageCreateInfo);
+DECLARE_ARRAY(GfxShaderDesc);
 
 struct GpuBlock {
     VkDeviceMemory  device_mem;

@@ -45,7 +45,7 @@ Result vulkan_swapchain_image_view_create(VkDevice log_dev, VkImage image, VkFor
 Result vulkan_swapchain_image_views_create_from_image(VkDevice device, VkFormat format, Array(VkImage) *images, Array(VkImageView) *image_views);
 
 /* GRAPHICS_PIPELINE */
-Result vulkan_shader_module_create_from_file(VkDevice device, const char *filename, VkShaderModule *module);
+Result vulkan_shader_module_create(VkDevice device, const char *code, uint32_t code_size, VkShaderModule *module);
 Result vulkan_render_pass_create(VkDevice device, const VkFormat *swap_chain_image_format, VkRenderPass *render_pass);
 Result vulkan_framebuffers_create(VkDevice device, VkRenderPass render_pass, VkExtent2D extent, Array(VkImageView) *image_views, Array(VkFramebuffer) *fbs);
 

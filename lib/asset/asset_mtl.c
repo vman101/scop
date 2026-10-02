@@ -38,8 +38,7 @@ Result asset_mtl_file_load(const char *filename, AssetParseDebugTracker *tracker
     AssetMtl *target    = NULL;
 
     while (file.len) {
-        tracker->cursor = 0;
-        tracker->line++;
+        asset_debug_parser_tracker_line_advance(tracker, 1);
         StringView line  = sv_trim_left(sv_chop(&file, '\n'));
         if (sv_empty(&line) || line.data[0] == '#') { continue; }
         StringView token = sv_trim_left(sv_chop(&line, ' '));

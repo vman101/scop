@@ -1,5 +1,7 @@
 #pragma once
 
+#define ASSET
+
 #include <utils/array_types.h>
 #include "utils/defines.h"
 #include <stdint.h>
@@ -107,22 +109,25 @@ struct                    AssetObjData {
 
 typedef union { Vec3 v3; Vec2 v2; float f; } OutVec;
 
-Result          asset_obj_file_load(const char *filename, AssetParseDebugTracker *tracker, AssetObjData *out);
-Result          asset_mtl_file_load(const char *filename, AssetParseDebugTracker *tracker, Array(AssetMtl) *out);
-int             asset_entry_type_get(StringView s, const StringView entries_sv[], const int entries_ls[], size_t len);
-
-Result          asset_parse_uint32_t(StringView line, AssetParseDebugTracker *tracker, uint32_t *out);
-Result          asset_parse_string(StringView line, AssetParseDebugTracker *tracker, char out[64]);
-Result          asset_parse_float(StringView line, AssetParseDebugTracker *tracker, float *out);
-Result          asset_parse_vec2(StringView line, AssetParseDebugTracker *tracker, Vec2 *vec);
-Result          asset_parse_vec3(StringView line, AssetParseDebugTracker *tracker, Vec3 *vec);
-Result          asset_parse_vec2_into_arr(StringView line, AssetParseDebugTracker *tracker, Array(Vec2) *vec);
-Result          asset_parse_vec3_into_arr(StringView line, AssetParseDebugTracker *tracker, Array(Vec3) *vec);
-
-void            asset_debug_print_index_arr(const char *title, Array(AssetObjIndex) *indices);
-void            asset_debug_print_vec3_arr(const char *title, Array(Vec3) *position);
-void            asset_debug_print_mtl(AssetMtl *mtl);
-
-void            asset_debug_print_vector3(const char *title, Vec3 vec);
-void            asset_debug_print_float(const char *title, float f);
-void            asset_debug_print_invalid_token(const char *filename, AssetParseDebugTracker *tracker, StringView token, int type, const char**entry_names);
+ASSET Result  asset_obj_file_load(const char *filename, AssetParseDebugTracker *tracker, AssetObjData *out);
+ASSET Result  asset_mtl_file_load(const char *filename, AssetParseDebugTracker *tracker, Array(AssetMtl) *out);
+ASSET int     asset_entry_type_get(StringView s, const StringView entries_sv[], const int entries_ls[], size_t len);
+ASSET 
+ASSET Result  asset_parse_uint32_t(StringView line, AssetParseDebugTracker *tracker, uint32_t *out);
+ASSET Result  asset_parse_string(StringView line, AssetParseDebugTracker *tracker, char out[64]);
+ASSET Result  asset_parse_float(StringView line, AssetParseDebugTracker *tracker, float *out);
+ASSET Result  asset_parse_vec2(StringView line, AssetParseDebugTracker *tracker, Vec2 *vec);
+ASSET Result  asset_parse_vec3(StringView line, AssetParseDebugTracker *tracker, Vec3 *vec);
+ASSET Result  asset_parse_vec2_into_arr(StringView line, AssetParseDebugTracker *tracker, Array(Vec2) *vec);
+ASSET Result  asset_parse_vec3_into_arr(StringView line, AssetParseDebugTracker *tracker, Array(Vec3) *vec);
+ASSET 
+ASSET void    asset_debug_print_index_arr(const char *title, Array(AssetObjIndex) *indices);
+ASSET void    asset_debug_print_vec3_arr(const char *title, Array(Vec3) *position);
+ASSET void    asset_debug_print_mtl(AssetMtl *mtl);
+ASSET 
+ASSET void    asset_debug_print_vector3(const char *title, Vec3 vec);
+ASSET void    asset_debug_print_float(const char *title, float f);
+ASSET void    asset_debug_print_invalid_token(const char *filename, AssetParseDebugTracker *tracker, StringView token, int type, const char**entry_names);
+ASSET 
+ASSET void    asset_debug_parser_tracker_line_advance(AssetParseDebugTracker *tracker, int32_t adv);
+ASSET void    asset_debug_parser_tracker_cursor_advance(AssetParseDebugTracker *tracker, ptrdiff_t adv);
