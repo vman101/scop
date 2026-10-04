@@ -23,7 +23,7 @@ typedef struct {
     const char *name;
     CoreWindowSystem ws; // which window system this extension serves
 } SurfaceExt;
- 
+
 static const SurfaceExt k_platform_surface_exts[] = {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     { VK_KHR_WIN32_SURFACE_EXTENSION_NAME,   NATIVE_WS_WIN32   },
@@ -68,10 +68,10 @@ Result gfx_platform_surface_instance_extensions_get(uint32_t *ws_mask, char ***e
     Result res = RESULT_OK;
     if (ext_available(props, *count, VK_KHR_SURFACE_EXTENSION_NAME)) {
         const char *surface_ext = VK_KHR_SURFACE_EXTENSION_NAME;
-        res = tda_push(&out, (void *)&surface_ext);
+        TRY_GOTO(res, fail, tda_push(&out, (void *)&surface_ext));
         for (uint32_t i = 0; res == RESULT_OK && i < PLATFORM_SURFACE_EXT_COUNT; i++) {
             if (ext_available(props, *count, k_platform_surface_exts[i].name)) {
-                res = tda_push(&out, (void *)&k_platform_surface_exts[i].name);
+                TRY_GOTO(res, fail, tda_push(&out, (void *)&k_platform_surface_exts[i].name));
                 *ws_mask |= 1U << k_platform_surface_exts[i].ws;
             }
         }
@@ -84,7 +84,11 @@ Result gfx_platform_surface_instance_extensions_get(uint32_t *ws_mask, char ***e
         res = RESULT_ERR_VULKAN;
     }
     return res;
+fail:
+    tda_destroy(&out);
+    return res;
 }
+
 Result gfx_platform_surface_create(GfxDevice dev, uint32_t ws_mask, const CoreNativeWindow *w) {
     VkInstance inst = dev->ctx.instance;
     if (!(ws_mask & (1U << w->type))) {

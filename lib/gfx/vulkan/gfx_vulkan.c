@@ -118,38 +118,27 @@ void
 gfx_device_destroy(GfxDevice_T *dev) {
     VkContext *ctx = &dev->ctx;
     vkDeviceWaitIdle(ctx->logical_device);
-    vulkan_debug_messenger_destroy(ctx->instance, ctx->messenger);
-    // vkDestroySemaphore(dev->ctx.logical_device, dev->image_available_semaphore, NULL);
-    // vkDestroySemaphore(dev->ctx.logical_device, dev->render_finished_semaphore, NULL);
-    // vkDestroyFence(dev->ctx.logical_device, dev->in_flight_fence, NULL);
-    vkDestroyCommandPool(ctx->logical_device, dev->command_pool, NULL);
-    // for (size_T i = 0; i < tda_size(&dev->buffers); i++) {
-    //     vkDestroyBuffer(dev->ctx.logical_device, *tda_at(&dev->buffers, i), NULL);
-    // }
-    // for (size_t i = 0; i < tda_size(&dev->device_memory); i++) {
-    //     vkFreeMemory(ctx->logical_device, *tda_at(&dev->device_memory, i), NULL);
-    // }
-    for (size_t i = 0; i < tda_size(&dev->swapchain.framebuffers); i++) {
-        vkDestroyFramebuffer(ctx->logical_device, *tda_at(&dev->swapchain.framebuffers, i), NULL);
+    gfx_swapchain_destroy(dev);
+
+    for (size_t i = 0; i < ARRAY_LEN(dev->frames); i++) {
+        vkDestroySemaphore(dev->ctx.logical_device, dev->frames[i].image_available, NULL);
+        vkDestroyFence(dev->ctx.logical_device, dev->frames[i].in_flight_fence, NULL);
+        vkDestroyCommandPool(ctx->logical_device, dev->frames[i].command_pool, NULL);
     }
-    for (size_t i = 0; i < tda_size(&dev->swapchain.image_views); i++) {
-        vkDestroyImageView(ctx->logical_device, *tda_at(&dev->swapchain.image_views, i), NULL);
+    for (size_t i = 0; i < ARRAY_LEN(dev->global_buffers); i++) {
+        gfx_buffer_destroy(dev, dev->global_buffers[i]);
     }
-    // tda_destroy(&dev->buffers);
-    tda_destroy(&dev->swapchain.framebuffers);
-    tda_destroy(&dev->swapchain.image_views);
-    tda_destroy(&dev->swapchain.images);
+    vkDestroyDescriptorPool(dev->ctx.logical_device, dev->descriptors.pool, NULL);
     vkDestroyRenderPass(ctx->logical_device, dev->render_pass, NULL);
-    vkDestroySwapchainKHR(ctx->logical_device, dev->swapchain.handle, NULL);
+    gfx_memory_pool_destroy(dev, &dev->pool_gpu);
+    gfx_memory_pool_destroy(dev, &dev->pool_upload);
+    vkDestroyDescriptorSetLayout(dev->ctx.logical_device, dev->descriptors.layout, NULL);
     vkDestroyDevice(ctx->logical_device, NULL);
     vkDestroySurfaceKHR(ctx->instance, ctx->surface, NULL);
-    vkDestroyInstance(ctx->instance, NULL);
-}
 
-void
-gfx_pipeline_destroy(GfxDevice dev, GfxPipeline pipeline) {
-    vkDestroyPipeline(dev->ctx.logical_device, pipeline->handle, NULL);
-    vkDestroyPipelineLayout(dev->ctx.logical_device, pipeline->layout, NULL);
+    vulkan_debug_messenger_destroy(ctx->instance, ctx->messenger);
+    vkDestroyInstance(ctx->instance, NULL);
+    free(dev);
 }
 
 Result
@@ -177,35 +166,29 @@ gfx_device_create(GfxDeviceDesc *dev_info, GfxDevice_T **device) {
     };
 
     TRY_GOTO(r, fail, gfx_vulkan_context_init(dev, &ctx_info));
+    TRY_GOTO(r, fail, gfx_vulkan_descriptor_layout_init(dev));
     TRY_GOTO(r, fail, vulkan_render_pass_create(dev->ctx.logical_device, &dev->ctx.surface_format.format, &dev->render_pass));
-    TRY_GOTO(r, fail, gfx_swapchain_init(dev, dev->width, dev->height));
-    TRY_GOTO(r, fail, vulkan_framebuffers_create(
-        dev->ctx.logical_device,
-        dev->render_pass,
-        dev->swapchain.extent,
-        &dev->swapchain.image_views,
-        &dev->swapchain.framebuffers
-    ));
-    TRY_GOTO(r, fail, gfx_memory_pool_init(
+    TRY_GOTO(r, fail, gfx_swapchain_create(dev, dev->width, dev->height));
+    TRY_GOTO(r, fail, gfx_memory_pool_create(
         dev,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         GPU_POOL_GPU_BLOCK_SIZE,
         GPU_BLOCK_COUNT,
         &dev->pool_gpu
     ));
-    TRY_GOTO(r, fail, gfx_memory_pool_init(
+    TRY_GOTO(r, fail, gfx_memory_pool_create(
         dev,
         VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
         GPU_POOL_GPU_BLOCK_SIZE,
         GPU_BLOCK_COUNT,
         &dev->pool_upload
     ));
+    TRY_GOTO(r, fail, gfx_vulkan_descriptor_pool_create(dev));
+    TRY_GOTO(r, fail, gfx_vulkan_descriptor_set_create(dev));
 
-    for (size_t i = 0; i < GFX_FRAME_COUNT; i++) {
+    for (size_t i = 0; i < GFX_MAX_FRAMES; i++) {
         TRY(gfx_framedata_init(&dev->ctx, &dev->frames[i]));
     }
-
-    TRY(vulkan_command_pool_create(dev->ctx.logical_device, dev->ctx.indices.graphics_family, &dev->command_pool));
     return RESULT_OK;
 
 fail:

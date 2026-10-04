@@ -32,7 +32,7 @@ alloc(uint32_t size) {
 }
 
 Result
-read_file(const char *filename, const char *flags, Array(char) *da) {
+read_file(const char *filename, const char *flags, Array(uint8_t) *da) {
     FILE *shader_source = fopen(filename, flags);
     char *buffer = NULL;
 

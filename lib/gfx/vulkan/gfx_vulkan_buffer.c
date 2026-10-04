@@ -1,3 +1,4 @@
+#include "interface/mage_gfx.h"
 #include "interface/mage_result.h"
 #include "gfx_vulkan_internal.h"
 #include <vulkan/vulkan.h>
@@ -5,6 +6,7 @@
 #include <utils/result_tools.h>
 #include <string.h>
 #include <stdlib.h>
+#include <vulkan/vulkan_core.h>
 
 static VkBufferUsageFlags
 gfx_buffer_usage_to_vulkan(GfxBufferUsage u) {
@@ -12,25 +14,39 @@ gfx_buffer_usage_to_vulkan(GfxBufferUsage u) {
         case GFX_BUFFER_VERTEX:  return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         case GFX_BUFFER_INDEX:   return VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         case GFX_BUFFER_UNIFORM: return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        case GFX_BUFFER_STORAGE: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     }
     return 0;
 }
 
+void
+gfx_buffer_destroy(GfxDevice dev, GfxBuffer buf) {
+    vkDeviceWaitIdle(dev->ctx.logical_device);
+    if (buf) {
+        if (buf->handle) vkDestroyBuffer(dev->ctx.logical_device, buf->handle, NULL);
+    }
+    free(buf);
+}
+
 Result
 gfx_buffer_create(GfxDevice dev, GfxBufferDesc *desc, GfxBuffer *out) {
+    vkDeviceWaitIdle(dev->ctx.logical_device);
     Result r = RESULT_OK;
     uint64_t    buffer_bytes_size = desc->count * desc->member_size;
+    if (buffer_bytes_size == 0) {
+        return RESULT_ERR_VULKAN;
+    }
 
-    GfxBuffer_T *gfx_buffer = alloc(sizeof(*gfx_buffer));
-    gfx_buffer->bytes_size = buffer_bytes_size;
-    gfx_buffer->count = desc->count;
-    gfx_buffer->usage = desc->usage;
-    gfx_buffer->member_size = desc->member_size;
+    GfxBuffer_T *gfx_buffer        = alloc(sizeof(*gfx_buffer));
+    gfx_buffer->bytes_size         = buffer_bytes_size;
+    gfx_buffer->count              = desc->count;
+    gfx_buffer->usage              = desc->usage;
+    gfx_buffer->member_size        = desc->member_size;
 
     VkBufferCreateInfo buffer_info = {0};
-    buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buffer_info.size = buffer_bytes_size;
-    buffer_info.usage = gfx_buffer_usage_to_vulkan(desc->usage);
+    buffer_info.sType              = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_info.size               = buffer_bytes_size;
+    buffer_info.usage              = gfx_buffer_usage_to_vulkan(desc->usage);
 
     TRY_GOTO(r, fail, vulkan_buffer_create(dev->ctx.logical_device, &buffer_info, &gfx_buffer->handle));
 
@@ -55,7 +71,7 @@ gfx_buffer_create(GfxDevice dev, GfxBufferDesc *desc, GfxBuffer *out) {
     return RESULT_OK;
 
 fail:
+    if (gfx_buffer->handle) vkDestroyBuffer(dev->ctx.logical_device, gfx_buffer->handle, NULL);
     free(gfx_buffer);
     return r;
 }
-

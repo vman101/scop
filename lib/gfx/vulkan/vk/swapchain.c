@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
+#include "interface/mage_result.h"
+#include "utils/da.h"
 #include "vk.h"
 #include <utils/result_tools.h>
 #include <utils/array_types.h>
@@ -29,7 +31,7 @@ vulkan_swapchain_present_mode_choose(SwapChainSupportDetails *details) {
     assert(present_modes_size > 0);
     for (size_t i = 0; i < present_modes_size; i++) {
         VkPresentModeKHR *presentMode = tda_at(&details->present_modes, i);
-        if (*presentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+        if (*presentMode == VK_PRESENT_MODE_FIFO_KHR) {
             return *presentMode;
         }
     }
@@ -39,11 +41,16 @@ vulkan_swapchain_present_mode_choose(SwapChainSupportDetails *details) {
 
 Result
 vulkan_swapchain_image_format_query(VkPhysicalDevice device, VkSurfaceKHR surface, VkSurfaceFormatKHR *out) {
-    SwapChainSupportDetails details;
-    TRY(vulkan_swapchain_support_query(device, surface, &details));
+    SwapChainSupportDetails details = {0};
+    Result                  r       = RESULT_OK;
+    TRY_GOTO(r, cleanup, vulkan_swapchain_support_query(device, surface, &details));
 
     VkSurfaceFormatKHR format = vulkan_swapchain_surface_format_choose(&details);
     *out = format;
+
+cleanup:
+    tda_destroy(&details.formats);
+    tda_destroy(&details.present_modes);
     return RESULT_OK;
 }
 
@@ -99,8 +106,9 @@ vulkan_swapchain_info_create(
     VkFormat *swapchain_format,
     VkExtent2D *swapchain_extent
 ) {
+    Result r = RESULT_OK;
     SwapChainSupportDetails details;
-    TRY(vulkan_swapchain_support_query(device, surface, &details));
+    TRY_GOTO(r, cleanup, vulkan_swapchain_support_query(device, surface, &details));
 
     VkSurfaceFormatKHR format = vulkan_swapchain_surface_format_choose(&details);
     VkPresentModeKHR present_mode = vulkan_swapchain_present_mode_choose(&details);
@@ -139,6 +147,7 @@ vulkan_swapchain_info_create(
     *swapchain_format = format.format;
     *swapchain_extent = extent;
 
+cleanup:
     tda_destroy(&details.present_modes);
     tda_destroy(&details.formats);
 
@@ -175,12 +184,26 @@ vulkan_swapchain_image_view_create(
 
 Result
 vulkan_swapchain_image_views_create_from_image(VkDevice device, VkFormat format, Array(VkImage) *images, Array(VkImageView) *image_views) {
+    Result r = RESULT_OK;
     TRY(tda_create(image_views, tda_size(images)));
     for (size_t i = 0; i < tda_size(images); i++) {
-        VkImage image = *tda_at(images, i);
+        VkImage *p_image = tda_at(images, i);
+        if (!p_image) {
+            r = RESULT_ERR_NOT_FOUND;
+            goto fail;
+        }
+        VkImage image = *p_image;
         VkImageView *image_view = tda_at(image_views, i);
-        TRY(vulkan_swapchain_image_view_create(device, image, format, image_view));
+        if (!image_view) {
+            r = RESULT_ERR_NOT_FOUND;
+            goto fail;
+        }
+        TRY_GOTO(r, fail, vulkan_swapchain_image_view_create(device, image, format, image_view));
         tda_size(image_views)++;
     }
-    return RESULT_OK;
+
+    return r;
+fail:
+    tda_destroy(image_views);
+    return r;
 }

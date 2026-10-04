@@ -1,3 +1,4 @@
+#include <stdint.h>
 #define ALLOCATORS_IMPLEMENTATION
 #include <utils/utils.h>
 #include <utils/result_tools.h>
@@ -72,12 +73,20 @@ gfx_device_memory_request(GfxDevice dev, GfxMemoryKind mem_kind, uint64_t size, 
 }
 
 Result
-gfx_memory_pool_init(GfxDevice dev, VkMemoryPropertyFlags props, uint64_t block_size, uint64_t block_count, GpuPool *pool) {
+gfx_memory_pool_create(GfxDevice dev, VkMemoryPropertyFlags props, uint64_t block_size, uint64_t block_count, GpuPool *pool) {
     *pool = (GpuPool){
         .block_size   = block_size,
         .host_visible = (props & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0,
     };
     TRY(tda_create(&pool->blocks, block_count));
-    return vulkan_memory_type_find(dev->ctx.physical_device, props, &pool->memory_type_index);
+    return vulkan_memory_type_find(dev->ctx.physical_device, UINT32_MAX, props, &pool->memory_type_index);
 }
 
+void
+gfx_memory_pool_destroy(GfxDevice dev, GpuPool *pool) {
+    for (size_t i = 0; i < tda_size(&pool->blocks); i++) {
+        GpuBlock *b = tda_at(&pool->blocks, i);
+        vkFreeMemory(dev->ctx.logical_device, b->device_mem, NULL);
+    }
+    tda_destroy(&pool->blocks);
+}

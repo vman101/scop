@@ -4,3 +4,4 @@ leak:libX11
 leak:libxcb
 leak:libdbus
 leak:_glfw
+leak:libnvidia

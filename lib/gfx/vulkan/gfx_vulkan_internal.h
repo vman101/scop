@@ -11,7 +11,6 @@
 
 #define GPU_POOL_GPU_BLOCK_SIZE (512ULL * 1024 * 1024)
 #define GPU_BLOCK_COUNT 8
-#define GFX_FRAME_COUNT 2
 
 typedef struct GpuBlock GpuBlock;
 
@@ -20,6 +19,7 @@ DECLARE_ARRAY(VkSemaphore);
 DECLARE_ARRAY(VkShaderModule);
 DECLARE_ARRAY(VkPipelineShaderStageCreateInfo);
 DECLARE_ARRAY(GfxShaderDesc);
+DECLARE_ARRAY(VkDescriptorSet);
 
 struct GpuBlock {
     VkDeviceMemory  device_mem;
@@ -32,7 +32,7 @@ typedef struct {
     uint32_t            memory_type_index;
     VkDeviceSize        block_size;
     bool                host_visible;
-    Array(GpuBlock)  blocks;
+    Array(GpuBlock)     blocks;
 } GpuPool;
 
 typedef struct {
@@ -48,7 +48,6 @@ typedef struct {
 typedef struct {
     VkVertexInputAttributeDescription attrs[2];
 } VertexAttrDescs;
-
 
 typedef struct {
     VkInstance                  instance;
@@ -73,6 +72,9 @@ typedef struct {
     VkSwapchainKHR              handle;
     VkFormat                    image_format;
     VkExtent2D                  extent;
+    VkImage                     depth_image;
+    VkDeviceMemory              depth_memory;
+    VkImageView                 depth_view;
     Array(VkImage)              images;
     Array(VkImageView)          image_views;
     Array(VkFramebuffer)        framebuffers;
@@ -89,12 +91,20 @@ struct GfxFrame_T {
     FrameData           *data;
     VkCommandBuffer     cmd;
     uint32_t            image_index;
+    uint32_t            push_constant_offet;
 };
+
+typedef struct {
+    VkDescriptorPool        pool;
+    VkDescriptorSetLayout   layout;
+    VkDescriptorSet         set;
+} Descriptors;
 
 struct GfxDevice_T {
     VkContext       ctx;
     Swapchain       swapchain;
-    FrameData       frames[GFX_FRAME_COUNT];
+    Descriptors     descriptors;
+    FrameData       frames[GFX_MAX_FRAMES];
     VkCommandPool   command_pool;
     VkRenderPass    render_pass;
     GpuPool         pool_gpu;
@@ -104,11 +114,13 @@ struct GfxDevice_T {
     GfxFrame_T      frame;
     uint32_t        width;
     uint32_t        height;
+    GfxBuffer       global_buffers[GFX_GLOBAL_SLOT_COUNT];
     bool            swapchain_dirty;
     bool            debug_mode;
 };
 
 DECLARE_ARRAY(GfxVertexLayout);
+DECLARE_ARRAY(VkDescriptorSetLayout);
 
 struct GfxPipelineDesc {
     const char                  *vertex_shader_path;
@@ -137,10 +149,28 @@ struct GfxBuffer_T {
     uint64_t        member_size;
 };
 
+struct GfxTextureDesc {
+    uint8_t     *data;
+    uint64_t    width;
+    uint64_t    height;
+};
+
+struct GfxTexture_T {
+    VkImage     image;
+    GfxBuffer   buf;
+};
+
 /* SWAPCHAIN */
-Result gfx_swapchain_init(GfxDevice_T *dev, uint32_t width, uint32_t height);
+Result gfx_swapchain_create(GfxDevice_T *dev, uint32_t width, uint32_t height);
 Result gfx_swapchain_recreate(GfxDevice dev);
-void gfx_swapchain_destroy(GfxDevice_T *dev);
+void   gfx_swapchain_destroy(GfxDevice_T *dev);
+
 /* MEMORY */
-Result gfx_memory_pool_init(GfxDevice dev, VkMemoryPropertyFlags props, uint64_t block_size, uint64_t block_count, GpuPool *pool);
+Result gfx_memory_pool_create(GfxDevice dev, VkMemoryPropertyFlags props, uint64_t block_size, uint64_t block_count, GpuPool *pool);
+void   gfx_memory_pool_destroy(GfxDevice dev, GpuPool *pool);
 Result gfx_device_memory_request(GfxDevice dev, GfxMemoryKind mem_kind, uint64_t size, uint64_t align, GpuAllocation *out);
+Result gfx_vulkan_descriptor_layout_init(GfxDevice dev);
+Result gfx_vulkan_descriptor_pool_create(GfxDevice dev);
+Result gfx_vulkan_descriptor_set_create(GfxDevice dev);
+
+VkShaderStageFlags gfx_shader_stage_to_vk(GfxShaderStage s);

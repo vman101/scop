@@ -1,5 +1,6 @@
 #include <utils/result_tools.h>
 #include <utils/utils.h>
+#include "interface/mage_result.h"
 #include "vk.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -40,16 +41,16 @@ Result vulkan_check_device_extension_support(VkPhysicalDevice device, Array(Char
     size_t device_extensions_len            = tda_size(device_extensions);
     uint32_t count                          = {0};
     Array(VkExtensionProperties) extentions = {0};
-    Result res                              = RESULT_ERR_VULKAN;
+    Result r                                = RESULT_ERR_VULKAN;
 
     VK_TRY(vkEnumerateDeviceExtensionProperties(device, NULL, &count, NULL));
     if (count == 0) {
         fprintf(stderr, "This device does not support any extensions\n");
-        goto done;
+        goto cleanup;
     }
 
-    TRY(tda_create(&extentions, count));
-    VK_TRY(vkEnumerateDeviceExtensionProperties(device, NULL, &count, (void *)tda_data(&extentions)));
+    TRY_GOTO(r, cleanup, tda_create(&extentions, count));
+    VK_TRY_GOTO(r, cleanup, vkEnumerateDeviceExtensionProperties(device, NULL, &count, (void *)tda_data(&extentions)));
     tda_size(&extentions) = count;
 
     for (size_t r = 0; r < device_extensions_len; r++) {
@@ -57,6 +58,7 @@ Result vulkan_check_device_extension_support(VkPhysicalDevice device, Array(Char
         bool found = false;
         for (uint32_t a = 0; a < count; a++) {
             VkExtensionProperties *p = tda_at(&extentions, a);
+            if (!p) { r = RESULT_ERR_NOT_FOUND; goto cleanup; }
             if (strcmp(required, p->extensionName) == 0) {
                 found = true;
                 break;
@@ -64,14 +66,14 @@ Result vulkan_check_device_extension_support(VkPhysicalDevice device, Array(Char
         }
         if (!found) {
             fprintf(stderr, "Missing device extension: %s\n", required);
-            goto done;
+            goto cleanup;
         }
     }
-    res = RESULT_OK;
+    r = RESULT_OK;
 
-done:
+cleanup:
     tda_destroy(&extentions);
-    return res;
+    return r;
 }
 
 static bool
@@ -81,10 +83,10 @@ is_swapchain_adequate(SwapChainSupportDetails *details) {
 
 bool
 vulkan_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface, Array(CharPtr) *device_extensions) {
-    // VkPhysicalDeviceProperties dev_properties = {0};
-    // VkPhysicalDeviceFeatures dev_features = {0};
-    // vkGetPhysicalDeviceProperties(device, &dev_properties);
-    // vkGetPhysicalDeviceFeatures(device, &dev_features);
+    VkPhysicalDeviceProperties dev_properties = {0};
+    VkPhysicalDeviceFeatures   dev_features   = {0};
+    vkGetPhysicalDeviceProperties(device, &dev_properties);
+    vkGetPhysicalDeviceFeatures(device, &dev_features);
 
     QueueFamilyIndices indices = vulkan_device_find_queue_families(device, surface);
     Result extensions_supported = vulkan_check_device_extension_support(device, device_extensions);
@@ -99,7 +101,8 @@ vulkan_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface, Array(Char
             && indices.present_family != QUEUE_NONE
             && swapchain_adequate
             && extensions_supported == RESULT_OK
-            && swap_chain_res == RESULT_OK);
+            && swap_chain_res == RESULT_OK
+            && dev_features.fillModeNonSolid);
 }
 
 Result

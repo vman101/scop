@@ -58,9 +58,9 @@ typedef struct {
     size_t      cap;
     size_t      size;
 } DynamicArray;
+
 _Static_assert(offsetof(DynamicArray, data) == 0, "data must be first");
 typedef char data_first_check[offsetof(DynamicArray, data) == 0 ? 1 : -1];
-
 
 void    da_set(DynamicArray *da, size_t index, void *mem);
 Result  da_create(DynamicArray *da, size_t member_size, size_t cap);

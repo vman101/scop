@@ -4,6 +4,8 @@
 #include <string.h>
 #include <utils/utils.h>
 
+typedef union { Vec2 v2; Vec3 v3; float f; } OutVec;
+
 static Result
 asset_parse_vector(StringView line, AssetParseDebugTracker *tracker, uint32_t vec_len, OutVec *out) {
     float values[3]       = {0};
@@ -11,7 +13,7 @@ asset_parse_vector(StringView line, AssetParseDebugTracker *tracker, uint32_t ve
     size_t i              = 0;
 
     for (; i < vec_len && line.len; i++) {
-        StringView tok  = sv_trim_left(sv_chop(&line, ' '));
+        StringView tok  = sv_trim(sv_chop(&line, ' '));
         asset_debug_parser_tracker_cursor_advance(tracker, tok.data - start_pos);
         if (sv_empty(&tok)) { continue; }
         TRY(sv_to_float(tok, &values[i]));

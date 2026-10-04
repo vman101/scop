@@ -17,14 +17,10 @@ typedef AllocatorHeader Allocator;
 typedef struct {
     AllocatorHeader head;
     uint64_t        offset;
-    uint64_t          size;
+    uint64_t        size;
 } LinearAllocator;
 
-#define allocate(a, size, align, out) allocate_impl(_Generic((a), \
-    LinearAllocator *: &(a)->head, \
-    Allocator *:       (a)), \
-        size, align, out \
-    )
+#define allocate(a, size, align, out) allocate_impl((Allocator *)(a), size, align, out)
 
 Result linear_alloc(LinearAllocator *alloc, uint64_t size, uint64_t align, uint64_t *out);
 void linear_init(LinearAllocator *alloc, size_t size);
@@ -39,10 +35,11 @@ size_t alloc_align(size_t size, uint32_t align) {
 
 Result allocate_impl(Allocator *alloc, uint64_t size, uint64_t align, uint64_t *out) {
     switch (alloc->type) {
-        case ALLOCATOR_TYPE_LINEAR:
+        case ALLOCATOR_TYPE_LINEAR: {
             LinearAllocator *la = (LinearAllocator *)alloc;
             linear_alloc(la, size, align, out);
             break ;
+        }
     }
     return RESULT_OK;
 }

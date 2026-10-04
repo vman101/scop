@@ -3,7 +3,7 @@
 #include <utils/utils.h>
 
 Result
-vulkan_shader_module_create(VkDevice device, const char *code, uint32_t code_size, VkShaderModule *module) {
+vulkan_shader_module_create(VkDevice device, const uint8_t *code, uint32_t code_size, VkShaderModule *module) {
     VkShaderModuleCreateInfo info = {0};
 
     info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

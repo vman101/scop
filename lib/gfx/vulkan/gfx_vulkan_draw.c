@@ -1,4 +1,3 @@
-#include "interface/mage_math.h"
 #include "interface/mage_gfx.h"
 #include "gfx_vulkan_internal.h"
 #include <vulkan/vulkan_core.h>
@@ -6,17 +5,14 @@
 #include <utils/result_tools.h>
 
 void
-gfx_push_constant_float(GfxFrame frame, float f) {
-    vkCmdPushConstants(frame->cmd, frame->dev->graphics_pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float), &f);
-}
-
-void
-gfx_push_constant_mat4(GfxFrame frame, Mat4 m) {
-    vkCmdPushConstants(frame->cmd, frame->dev->graphics_pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(m), &m);
+gfx_push_constant(GfxFrame frame, GfxPushConstantDesc *pc, void *data) {
+    vkCmdPushConstants(frame->cmd, frame->dev->graphics_pipeline->layout, gfx_shader_stage_to_vk(pc->stage), pc->offset, pc->size, data);
 }
 
 Result
 gfx_frame_begin(GfxDevice dev, GfxFrame *out) {
+    *out = NULL;
+
     if (dev->swapchain_dirty) {
         TRY(gfx_swapchain_recreate(dev));
         if (dev->swapchain_dirty) {
@@ -24,7 +20,6 @@ gfx_frame_begin(GfxDevice dev, GfxFrame *out) {
         }
     }
 
-    *out = NULL;
     FrameData *fd = &dev->frames[dev->current_frame];
     VkDevice device = dev->ctx.logical_device;
 
@@ -67,10 +62,11 @@ gfx_pass_begin(GfxFrame frame, const float clear[4]) {
     GfxDevice dev = frame->dev;
     VkExtent2D extent = dev->swapchain.extent;
 
-    VkClearValue clear_value = {
-        .color = {
-            .float32 = { clear[0], clear[1], clear[2], clear[3] },
-        },
+    vkCmdBindDescriptorSets(frame->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, dev->graphics_pipeline->layout, 0, 1, &dev->descriptors.set, 0, NULL);
+
+    VkClearValue clear_values[2] = {
+        { .color        = { .float32 = { clear[0], clear[1], clear[2], clear[3] } } },
+        { .depthStencil = { 1.0F, 0 } },   // 1.0 = farthest
     };
 
     VkRenderPassBeginInfo info = {
@@ -78,12 +74,12 @@ gfx_pass_begin(GfxFrame frame, const float clear[4]) {
         .renderPass = dev->render_pass,
         .renderArea = { .extent = extent},
         .framebuffer = *(VkFramebuffer *)tda_at_safe(&dev->swapchain.framebuffers, frame->image_index),
-        .clearValueCount = 1,
-        .pClearValues = &clear_value,
+        .clearValueCount = ARRAY_LEN(clear_values),
+        .pClearValues = clear_values,
     };
 
     vkCmdBeginRenderPass(frame->cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
-    VkViewport viewport = { .width = (float)extent.width, .height = (float)extent.height };
+    VkViewport viewport = { .width = (float)extent.width, .height = (float)extent.height, .minDepth = 0.0F, .maxDepth = 1.0F };
     VkRect2D scissor = { .extent = extent };
     vkCmdSetViewport(frame->cmd, 0, 1, &viewport);
     vkCmdSetScissor(frame->cmd, 0, 1, &scissor);
@@ -108,6 +104,15 @@ gfx_draw_indexed(GfxFrame frame, GfxBuffer vertices, GfxBuffer indices) {
     vkCmdBindVertexBuffers(frame->cmd, 0, 1, &vertices->handle, &offset);
     vkCmdBindIndexBuffer(frame->cmd, indices->handle, 0, type);
     vkCmdDrawIndexed(frame->cmd, indices->count, 1, 0, 0, 0);
+}
+
+void
+gfx_draw_indexed_range(GfxFrame frame, GfxBuffer vertices, GfxBuffer indices, GfxBufferRange range) {
+    VkDeviceSize offset = 0;
+    VkIndexType type = indices->member_size == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+    vkCmdBindVertexBuffers(frame->cmd, 0, 1, &vertices->handle, &offset);
+    vkCmdBindIndexBuffer(frame->cmd, indices->handle, 0, type);
+    vkCmdDrawIndexed(frame->cmd, range.count, 1, range.offset, 0, 0);
 }
 
 void
@@ -158,6 +163,6 @@ gfx_frame_end(GfxFrame frame) {
         return RESULT_ERR_VULKAN;
     }
 
-    dev->current_frame = (dev->current_frame + 1) % GFX_FRAME_COUNT;
+    dev->current_frame = (dev->current_frame + 1) % GFX_MAX_FRAMES;
     return RESULT_OK;
 }

@@ -1,12 +1,14 @@
 #include "gfx_vulkan_internal.h"
 #include "interface/mage_gfx.h"
 #include "utils/da.h"
+#include <stdlib.h>
 #include <utils/result_tools.h>
 #include <utils/utils.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
+#include "vk/vk.h"
 
-static VkShaderStageFlags
+VkShaderStageFlags
 gfx_shader_stage_to_vk(GfxShaderStage s) {
     switch (s) {
         case GFX_SHADER_STAGE_VERTEX:   return VK_SHADER_STAGE_VERTEX_BIT;
@@ -17,13 +19,24 @@ gfx_shader_stage_to_vk(GfxShaderStage s) {
 // gfx_vulkan.c
 static VkFormat gfx_format_to_vk(GfxFormat f) {
     switch (f) {
+        case GFX_FORMAT_UINT:        return VK_FORMAT_R32_UINT;
         case GFX_FORMAT_FLOAT:       return VK_FORMAT_R32_SFLOAT;
         case GFX_FORMAT_FLOAT2:      return VK_FORMAT_R32G32_SFLOAT;
         case GFX_FORMAT_FLOAT3:      return VK_FORMAT_R32G32B32_SFLOAT;
         case GFX_FORMAT_FLOAT4:      return VK_FORMAT_R32G32B32A32_SFLOAT;
         case GFX_FORMAT_UBYTE4_NORM: return VK_FORMAT_R8G8B8A8_UNORM;
+        default:
+            break ;
     }
     return VK_FORMAT_UNDEFINED;
+}
+
+void
+gfx_pipeline_destroy(GfxDevice dev, GfxPipeline pipeline) {
+    vkDeviceWaitIdle(dev->ctx.logical_device);
+    vkDestroyPipeline(dev->ctx.logical_device, pipeline->handle, NULL);
+    vkDestroyPipelineLayout(dev->ctx.logical_device, pipeline->layout, NULL);
+    free(pipeline);
 }
 
 Result
@@ -79,9 +92,9 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     vert_input_info.pVertexAttributeDescriptions         = attr_desc;
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly = {0};
-    input_assembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    input_assembly.primitiveRestartEnable = VK_FALSE;
+    input_assembly.sType                                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly.topology                               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    input_assembly.primitiveRestartEnable                 = VK_FALSE;
 
     VkDynamicState dynamic_states[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamic = {
@@ -91,7 +104,7 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     };
     VkPipelineViewportStateCreateInfo viewport_state = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-        .viewportCount = 1,   // pointers stay NULL, values come at record time
+        .viewportCount = 1,
         .scissorCount = 1,
     };
 
@@ -99,7 +112,7 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable        = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode             = VK_POLYGON_MODE_LINE;
+    rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth               = 1.0F;
     rasterizer.cullMode                = VK_CULL_MODE_NONE;
     rasterizer.frontFace               = VK_FRONT_FACE_CLOCKWISE;
@@ -120,11 +133,10 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     multisampling.pNext                 = NULL;
 
     VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
-    color_blend_attachment.colorWriteMask      =
-        VK_COLOR_COMPONENT_R_BIT
-        | VK_COLOR_COMPONENT_G_BIT
-        | VK_COLOR_COMPONENT_B_BIT
-        | VK_COLOR_COMPONENT_A_BIT;
+    color_blend_attachment.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT
+                                                | VK_COLOR_COMPONENT_G_BIT
+                                                | VK_COLOR_COMPONENT_B_BIT
+                                                | VK_COLOR_COMPONENT_A_BIT;
     color_blend_attachment.blendEnable         = VK_FALSE;
     color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
     color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
@@ -145,22 +157,35 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     color_blend.blendConstants[3] = 0.0F;
 
     GfxPushConstantDesc *pc_descs = desc->layout->push_constant_descs;
+    DECLARE_ARRAY(VkPushConstantRange);
 
-    VkPushConstantRange push_range = {
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .size = pc_descs->size,
-        .offset = pc_descs->offset,
-    };
+    Array(VkPushConstantRange) ranges = {0};
+    for (size_t i = 0; i < desc->layout->push_constant_count; i++) {
+        GfxPushConstantDesc *d = &pc_descs[i];
+        VkPushConstantRange pc = {
+            .stageFlags = gfx_shader_stage_to_vk(d->stage),
+            .size = d->size,
+            .offset = d->offset,
+        };
+        TRY(tda_push(&ranges, &pc));
+    }
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     VkPipelineLayout pipeline_layout;
     pipeline_layout_info.sType                      = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount             = 0;
-    pipeline_layout_info.pSetLayouts                = NULL;
-    pipeline_layout_info.pushConstantRangeCount     = desc->layout->push_constant_count;
-    pipeline_layout_info.pPushConstantRanges        = &push_range;
+    pipeline_layout_info.setLayoutCount             = 1;
+    pipeline_layout_info.pSetLayouts                = &dev->descriptors.layout;
+    pipeline_layout_info.pushConstantRangeCount     = tda_size(&ranges);
+    pipeline_layout_info.pPushConstantRanges        = tda_data(&ranges);
     VK_TRY(vkCreatePipelineLayout(dev->ctx.logical_device, &pipeline_layout_info, NULL, &pipeline_layout));
     pipeline->layout = pipeline_layout;
+
+    VkPipelineDepthStencilStateCreateInfo depth_stencil = {
+        .sType            = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable  = VK_TRUE,
+        .depthWriteEnable = VK_TRUE,
+        .depthCompareOp   = VK_COMPARE_OP_LESS,
+    };
 
     VkGraphicsPipelineCreateInfo pipeline_info = {0};
     pipeline_info.sType                        = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -171,7 +196,7 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
     pipeline_info.pViewportState               = &viewport_state;
     pipeline_info.pRasterizationState          = &rasterizer;
     pipeline_info.pMultisampleState            = &multisampling;
-    pipeline_info.pDepthStencilState           = NULL;
+    pipeline_info.pDepthStencilState           = &depth_stencil;
     pipeline_info.pColorBlendState             = &color_blend;
     pipeline_info.pDynamicState                = &dynamic;
     pipeline_info.layout                       = pipeline_layout;
@@ -189,5 +214,7 @@ gfx_pipeline_create(GfxDevice_T *dev, GfxPipelineDesc *desc, GfxPipeline *out) {
             vkDestroyShaderModule(dev->ctx.logical_device, stage->module, NULL);
         }
     }
+    tda_destroy(&shader_stages);
+    tda_destroy(&ranges);
     return RESULT_OK;
 }

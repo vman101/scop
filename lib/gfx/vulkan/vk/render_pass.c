@@ -5,46 +5,58 @@
 
 Result
 vulkan_render_pass_create(VkDevice device, const VkFormat *swap_chain_image_format, VkRenderPass *render_pass) {
-    VkAttachmentDescription color_attachment;
-    memset(&color_attachment, 0, sizeof(color_attachment));
-    color_attachment.format                    = *swap_chain_image_format;
-    color_attachment.samples                   = VK_SAMPLE_COUNT_1_BIT;
-    color_attachment.loadOp                    = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_attachment.storeOp                   = VK_ATTACHMENT_STORE_OP_STORE;
-    color_attachment.stencilLoadOp             = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    color_attachment.stencilStoreOp            = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    color_attachment.initialLayout             = VK_IMAGE_LAYOUT_UNDEFINED;
-    color_attachment.finalLayout               = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    color_attachment.flags                     = 0;
+    VkAttachmentDescription attachments[2] = {
+        {
+            .format         = *swap_chain_image_format,
+            .samples        = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        },
+        {
+            .format         = VK_FORMAT_D32_SFLOAT,
+            .samples        = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        },
+    };
 
-    VkAttachmentReference color_attachment_ref = {0};
-    color_attachment_ref.attachment            = 0;
-    color_attachment_ref.layout                = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+    VkAttachmentReference color_ref = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkAttachmentReference depth_ref = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
-    VkSubpassDescription subpass               = {0};
-    subpass.pipelineBindPoint                  = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount               = 1;
-    subpass.pColorAttachments                  = &color_attachment_ref;
+    VkSubpassDescription subpass = {
+        .pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount    = 1,
+        .pColorAttachments       = &color_ref,
+        .pDepthStencilAttachment = &depth_ref,
+    };
 
-    VkRenderPassCreateInfo render_pass_info    = {0};
-    render_pass_info.sType                     = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    render_pass_info.attachmentCount           = 1;
-    render_pass_info.pAttachments              = &color_attachment;
-    render_pass_info.subpassCount              = 1;
-    render_pass_info.pSubpasses                = &subpass;
+    VkSubpassDependency dependency = {
+        .srcSubpass    = VK_SUBPASS_EXTERNAL,
+        .dstSubpass    = 0,
+        .srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        .dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+    };
 
-    VkSubpassDependency dependency = {0};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    render_pass_info.dependencyCount = 1;
-    render_pass_info.pDependencies = &dependency;
+    VkRenderPassCreateInfo render_pass_info = {
+        .sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .attachmentCount = 2,
+        .pAttachments    = attachments,
+        .subpassCount    = 1,
+        .pSubpasses      = &subpass,
+        .dependencyCount = 1,
+        .pDependencies   = &dependency,
+    };
 
     VK_TRY(vkCreateRenderPass(device, &render_pass_info, NULL, render_pass));
-
     return RESULT_OK;
 }

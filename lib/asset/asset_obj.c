@@ -30,7 +30,20 @@ const char *entry_types_nm[] = {
 #undef X
 };
 
-Result asset_obj_parse_face_field(StringView field, AssetParseDebugTracker *tracker, AssetObjIndex *indices) {
+void
+asset_obj_destroy(AssetObjData *obj) {
+    if (!obj) return;
+    tda_destroy(&obj->positions);
+    tda_destroy(&obj->indices);
+    tda_destroy(&obj->normals);
+    tda_destroy(&obj->groups);
+    tda_destroy(&obj->use_mtl);
+    tda_destroy(&obj->mtl_lib);
+    tda_destroy(&obj->tex_coords);
+}
+
+Result
+asset_obj_parse_face_field(StringView field, AssetParseDebugTracker *tracker, AssetObjIndex *indices) {
     const char *const start_pos = field.data;
     StringView s                = sv_trim_left(sv_chop(&field, ' '));
     int32_t values[3]           = {0};
@@ -39,29 +52,35 @@ Result asset_obj_parse_face_field(StringView field, AssetParseDebugTracker *trac
         for (size_t i = 0; i < 3; i++) {
             StringView tok = sv_trim_left(sv_chop(&s, '/'));
             asset_debug_parser_tracker_cursor_advance(tracker, tok.data - start_pos);
-            if (sv_empty(&tok)) { continue; }
+            if (sv_empty(&tok)) { 
+                values[i] = ASSET_OBJ_NO_VALUE;
+                continue;
+            }
             TRY(sv_to_long(tok, &values[i]));
+            values[i] -= 1;
         }
     }
-    *indices = ((AssetObjIndex){ values[0], values[1], values[2] });
+    *indices = ((AssetObjIndex){ values[0], values[1], values[2], (int32_t)tracker->line });
     return RESULT_OK;
 }
 
-static void asset_obj_group_close(AssetObjData *o) {
+static void
+asset_obj_group_close(AssetObjData *o) {
     AssetObjGroup *last = tda_back(&o->groups);
     if (last) {
-        last->index_count = tda_size(&o->indices) - last->first_index;
+        last->count = tda_size(&o->indices) - last->index_start;
     }
 }
 
-Result asset_obj_parse_face(StringView line, AssetParseDebugTracker *tracker, AssetObjData *o) {
+Result
+asset_obj_parse_face(StringView line, AssetParseDebugTracker *tracker, AssetObjData *o) {
     AssetObjIndex verts[64];
     size_t n = 0;
 
     while (line.len) {
         StringView field = sv_trim_left(sv_chop(&line, ' '));
         if (sv_empty(&field)) continue;
-        if (n == 64) return RESULT_ERR_PARSE_EXPECT;              // absurd polygon
+        if (n == 64) return RESULT_ERR_PARSE_EXPECT;
         TRY(asset_obj_parse_face_field(field, tracker, &verts[n++]));
     }
     if (n < 3) return RESULT_ERR_PARSE_EXPECT;
@@ -74,29 +93,32 @@ Result asset_obj_parse_face(StringView line, AssetParseDebugTracker *tracker, As
     return RESULT_OK;
 }
 
-Result asset_obj_parse_group(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
+Result
+asset_obj_parse_group(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
     asset_obj_group_close(obj);
     AssetObjGroup new = {0};
     TRY(asset_parse_string(line, tracker, new.name));
-    new.first_index = tda_size(&obj->indices);
-    new.index_count = 0;
+    new.index_start = tda_size(&obj->indices);
+    new.index_start = 0;
     return RESULT_OK;
 }
 
-Result asset_obj_parse_and_load_mtllib(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
+Result
+asset_obj_parse_mtllib(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
+    const char *start = line.data;
     while (!sv_empty(&line)) {
         StringView mtl = sv_trim_left(sv_chop(&line, ' '));
+        asset_debug_parser_tracker_cursor_advance(tracker, mtl.data - start);
         if (sv_empty(&mtl)) continue;
-        char filename[PATH_MAX];
-        strcpy(filename, obj->path);
-        strcat(filename, "/");
-        strncat(filename, mtl.data, mtl.len);
-        TRY(asset_mtl_file_load(filename, tracker, &obj->materials));
+        AssetObjMtlLib lib = {0};
+        strncat(lib.name, mtl.data, mtl.len);
+        TRY(tda_push(&obj->mtl_lib, &lib));
     }
     return RESULT_OK;
 }
 
-Result asset_obj_parse_use_mtl(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
+Result
+asset_obj_parse_use_mtl(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
     char mtl_name[64] = {0};
     StringView tok = sv_trim_left(sv_chop(&line, ' '));
     asset_debug_parser_tracker_cursor_advance(tracker, line.data - tok.data);
@@ -105,37 +127,26 @@ Result asset_obj_parse_use_mtl(StringView line, AssetParseDebugTracker *tracker,
     if (mtl) {
         mtl->count = tda_size(&obj->indices) - mtl->index_start;
     }
-    AssetObjUseMtl new_use = {0};
-    for (size_t i = 0; i < tda_size(&obj->materials); i++) {
-        AssetMtl *mtl  = tda_get(&obj->materials, i);
-        if (mtl && strcmp(mtl_name, mtl->name) == 0) {
-            new_use.material = tda_index_of(&obj->materials, mtl);
-            new_use.index_start = tda_size(&obj->indices);
-        }
-    }
+
+    AssetObjUseMtl new_use = {
+        .index_start = tda_size(&obj->indices),
+    };
+    TRY(tda_push(&obj->use_mtl, &new_use));
 
     return RESULT_OK;
 }
 
-Result asset_obj_file_load(const char *filename, AssetParseDebugTracker *tracker, AssetObjData *out) {
-    Result r = RESULT_OK;
-
-    Array(char) content = {0};
-    TRY(read_file(filename, "r", &content));
-    StringView file = { tda_data(&content), tda_size(&content) };
-
-    StringView sv_filename = sv_from_str(filename);
-    StringView path = sv_chop_last(&sv_filename, '/');
-    sv_strcopy(path, out->path);
-
+Result
+asset_obj_file_parse(const Array(char) *content, AssetParseDebugTracker *tracker, AssetObjData *out) {
+    Result        r     = RESULT_OK;
+    StringView    file  = { tda_data(content), tda_size(content) };
     AssetObjGroup group = {0};
-    sv_strcopy(sv_filename, group.name);
-    group.first_index = 0;
+    group.index_start   = 0;
     tda_push(&out->groups, &group);
 
     while (file.len) {
         asset_debug_parser_tracker_line_advance(tracker, 1);
-        StringView line   = sv_trim_left(sv_chop(&file, '\n'));
+        StringView line   = sv_trim(sv_chop(&file, '\n'));
         if (sv_empty(&line) || line.data[0] == '#') { continue; }
         StringView token  = sv_chop(&line, ' ');
 
@@ -155,12 +166,12 @@ Result asset_obj_file_load(const char *filename, AssetParseDebugTracker *tracker
                 TRY_GOTO(r, fail, asset_parse_vec2_into_arr(line, tracker, &out->tex_coords));
                 break;
             case ASSET_OBJ_ENTRY_TYPE_MTL_LIB:
-                TRY_GOTO(r, fail, asset_obj_parse_and_load_mtllib(line, tracker, out));
+                TRY_GOTO(r, fail, asset_obj_parse_mtllib(line, tracker, out));
                 break;
             case ASSET_OBJ_ENTRY_TYPE_USE_MTL:
+                TRY_GOTO(r, fail, asset_obj_parse_use_mtl(line, tracker, out));
                 break;
             case ASSET_OBJ_ENTRY_TYPE_S:
-                printf("TODO: Impl parsing for type %s\n", entry_types_nm[type]);
                 break;
             case ASSET_OBJ_ENTRY_TYPE_O:
             case ASSET_OBJ_ENTRY_TYPE_G:
@@ -169,11 +180,10 @@ Result asset_obj_file_load(const char *filename, AssetParseDebugTracker *tracker
                 break;
             case ASSET_OBJ_ENTRY_TYPE_INVALID:
             default:
-                asset_debug_print_invalid_token(filename, tracker, token, type, entry_types_nm);
+                asset_debug_print_invalid_token(NULL, tracker, token, type, entry_types_nm);
         }
     }
 fail:
-    tda_destroy(&content);
     {
         AssetObjUseMtl *back = tda_back(&out->use_mtl);
         if (back && back->index_start < tda_size(&out->indices) && back->count == 0) {
@@ -181,7 +191,7 @@ fail:
         }
         for (size_t i = 0; i < tda_size(&out->groups); i++) {
             AssetObjGroup *cur = tda_get(&out->groups, i);
-            if (cur && cur->index_count == 0) {
+            if (cur && cur->index_start == 0) {
                 tda_remove(&out->groups, i);
             }
         }
