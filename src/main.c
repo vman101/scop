@@ -142,43 +142,15 @@ void print_help(void) {
     );
 }
 
-int main(int argc, const char *argv[]) { // NOLINT(readability-function-cognitive-complexity)
-    Result          r      = RESULT_OK;
-    Scop            scop   = {0};
-    const  uint32_t width  = 800;
-    const  uint32_t height = 600;
-
-    if (argc < 2) {
-        fprintf(stderr, "Invalid args: expect 1 + 1 optional\n");
-        print_help();
-        return EXIT_FAILURE;
-    }
-
-    TRY_GOTO(r, cleanup, platform_window_create(800, 600, "TEST", &scop.window));
-    TRY_GOTO(r, cleanup, scop_create(&scop));
-
+Result scop_load_mesh_from_file(Scop *scop, const char *obj_filename, Mesh *out) {
+    Result r =  RESULT_OK;
     Mesh                   mesh     = {0};
     AssetObjData           obj_data = {0};
     AssetParseDebugTracker tracker  = {0};
-    AssetImage             i        = {0};
-
-    const char *obj_filename        = argv[1];
-    const char *tex_path            = argc == 3 ? argv[2] : "assets/kittens.ppm";
     StringView s                    = { obj_filename, strlen(obj_filename) };
     StringView path                 = sv_chop_last(&s, '/');
 
     Array(uint8_t) content = {0};
-    TRY_GOTO(r, cleanup, read_file(tex_path, "r", &content));
-    TRY_GOTO(r, cleanup, asset_image_parse_ppm(&content, &i));
-    GfxTextureDesc tex_desc = {
-        .data   = i.px,
-        .width  = i.w,
-        .height = i.h
-    };
-    TRY_GOTO(r, cleanup, gfx_texture_create(scop.dev, &tex_desc, &scop.tex));
-
-    tda_destroy(&content);
-    free(i.px);
     TRY_GOTO(r, cleanup, read_file(obj_filename, "r", &content));
     r = asset_obj_file_parse((Array(char) *)&content, &tracker, &obj_data);
     if (r != RESULT_OK) {
@@ -203,7 +175,7 @@ int main(int argc, const char *argv[]) { // NOLINT(readability-function-cognitiv
                 continue ;
             }
             tracker = (AssetParseDebugTracker){0};
-            asset_mtl_file_parse((Array(char) *)&content, &tracker, &mtl_lib.mtls);
+            TRY_GOTO(r, cleanup, asset_mtl_file_parse((Array(char) *)&content, &tracker, &mtl_lib.mtls));
             if (t != RESULT_OK) {
                 fprintf(stderr, "Error while parsing file %s at %u:%u : %s\n", obj_filename, tracker.line, tracker.cursor, result_str(t));
             }
@@ -211,12 +183,70 @@ int main(int argc, const char *argv[]) { // NOLINT(readability-function-cognitiv
         }
     }
 
-    TRY(mesh_create(scop.dev, &obj_data, &mtl_libs, &mesh));
+    TRY_GOTO(r, cleanup, mesh_create(scop->dev, &obj_data, &mtl_libs, &mesh));
+    MOVE(out, mesh);
+    r = RESULT_OK;
+cleanup:
     for (size_t i = 0; i < tda_size(&mtl_libs); i++) {
         AssetMtlLib *l = tda_get(&mtl_libs, i);
         asset_mtl_destroy(l);
     }
     asset_obj_destroy(&obj_data);
+    tda_destroy(&content);
+    tda_destroy(&mtl_libs);
+    return r;
+}
+
+Result scop_load_texture(Scop *scop, const char *tex_path, GfxTexture *out) {
+    Result r = RESULT_OK;
+    AssetImage             i        = {0};
+    GfxTexture             tex      = {0};
+
+
+    Array(uint8_t) content = {0};
+    TRY_GOTO(r, cleanup, read_file(tex_path, "r", &content));
+    TRY_GOTO(r, cleanup, asset_image_parse_ppm(&content, &i));
+    GfxTextureDesc tex_desc = {
+        .data   = i.px,
+        .width  = i.w,
+        .height = i.h
+    };
+    TRY_GOTO(r, cleanup, gfx_texture_create(scop->dev, &tex_desc, &scop->tex));
+
+    MOVE(out, tex);
+    r = RESULT_OK;
+cleanup:
+    free(i.px);
+    tda_destroy(&content);
+    return r;
+}
+
+int main(int argc, const char *argv[]) { // NOLINT(readability-function-cognitive-complexity)
+    Result          r      = RESULT_OK;
+    Scop            scop   = {0};
+    const  uint32_t width  = 800;
+    const  uint32_t height = 600;
+
+    if (argc < 2) {
+        fprintf(stderr, "Invalid args: expect 1 + 1 optional\n");
+        print_help();
+        return EXIT_FAILURE;
+    }
+
+    TRY_GOTO(r, cleanup, platform_window_create(800, 600, "TEST", &scop.window));
+    TRY_GOTO(r, cleanup, scop_create(&scop));
+
+    Mesh       mesh = {0};
+    Mesh       human = {0};
+    GfxTexture tex  = {0};
+
+    const char *obj_filename    = argv[1];
+    const char *tex_path        = argc == 3 ? argv[2] : "assets/kittens.ppm";
+    const char *human_path  = "assets/FinalBaseMesh.obj";
+
+    TRY_GOTO(r, cleanup, scop_load_mesh_from_file(&scop, obj_filename, &mesh));
+    TRY_GOTO(r, cleanup, scop_load_mesh_from_file(&scop, human_path, &human));
+    TRY_GOTO(r, cleanup, scop_load_texture(&scop, tex_path, &tex));
 
     float ax = 0.0F;
     float ay = 0.0F;
@@ -229,7 +259,6 @@ int main(int argc, const char *argv[]) { // NOLINT(readability-function-cognitiv
     Mat4 c = mat4_translate(vec3_negate(mesh_center_get(&mesh)));
     uint64_t last = platform_time_ns();
     Mat4 v = mat4_look_at(eye, mesh.position, vec3(0, 1, 0));
-
 
     Vec3 *entities[] = {&mesh.position};
     uint32_t entity_index = 0;
@@ -302,14 +331,13 @@ int main(int argc, const char *argv[]) { // NOLINT(readability-function-cognitiv
         gfx_push_constant(f, &scop.pc_vert, &push);
         gfx_push_constant(f, &scop.pc_frag2, &tex_mix);
         mesh_draw(f, &mesh, &scop.pc_frag);
+        mesh_draw(f, &human, &scop.pc_frag);
         gfx_pass_end(f);
         TRY(gfx_frame_end(f));
     }
     r = RESULT_OK;
 
 cleanup:
-    tda_destroy(&content);
-    tda_destroy(&mtl_libs);
     mesh_destroy(scop.dev, &mesh);
     gfx_texture_destroy(scop.dev, scop.tex);
     platform_window_destroy(scop.window);
