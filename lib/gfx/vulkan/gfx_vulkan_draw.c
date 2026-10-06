@@ -91,28 +91,25 @@ gfx_bind_pipeline(GfxFrame f, GfxPipeline p) {
 }
 
 void
-gfx_draw(GfxFrame frame, GfxBuffer vertices) {
+gfx_bind_vertex_buffer(GfxFrame f, GfxBuffer buf) {
     VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(frame->cmd, 0, 1, &vertices->handle, &offset);
+    vkCmdBindVertexBuffers(f->cmd, 0, 1, &buf->handle, &offset);
+}
+
+void
+gfx_bind_index_buffer(GfxFrame f, GfxBuffer buf) {
+    VkIndexType type = buf->member_size == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+    vkCmdBindIndexBuffer(f->cmd, buf->handle, 0, type);
+}
+
+void
+gfx_draw(GfxFrame frame, GfxBuffer vertices) {
     vkCmdDraw(frame->cmd, vertices->count, 1, 0, 0);
 }
 
 void
-gfx_draw_indexed(GfxFrame frame, GfxBuffer vertices, GfxBuffer indices) {
-    VkDeviceSize offset = 0;
-    VkIndexType type = indices->member_size == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-    vkCmdBindVertexBuffers(frame->cmd, 0, 1, &vertices->handle, &offset);
-    vkCmdBindIndexBuffer(frame->cmd, indices->handle, 0, type);
-    vkCmdDrawIndexed(frame->cmd, indices->count, 1, 0, 0, 0);
-}
-
-void
-gfx_draw_indexed_range(GfxFrame frame, GfxBuffer vertices, GfxBuffer indices, GfxBufferRange range) {
-    VkDeviceSize offset = 0;
-    VkIndexType type = indices->member_size == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-    vkCmdBindVertexBuffers(frame->cmd, 0, 1, &vertices->handle, &offset);
-    vkCmdBindIndexBuffer(frame->cmd, indices->handle, 0, type);
-    vkCmdDrawIndexed(frame->cmd, range.count, 1, range.offset, 0, 0);
+gfx_draw_range(GfxFrame frame, uint32_t index_start, uint32_t count) {
+    vkCmdDrawIndexed(frame->cmd, count, 1, index_start, 0, 0);
 }
 
 void

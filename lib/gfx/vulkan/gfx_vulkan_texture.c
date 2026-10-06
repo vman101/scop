@@ -41,6 +41,8 @@ cleanup:
 
 void
 gfx_texture_destroy(GfxDevice dev, GfxTexture tex) {
-    gfx_buffer_destroy(dev, tex->buf);
+    if (tex) {
+        gfx_buffer_destroy(dev, tex->buf);
+    }
     free(tex);
 }

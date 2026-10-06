@@ -6,7 +6,7 @@
 #include "utils/da.h"
 #include "vk.h"
 #include <utils/result_tools.h>
-#include <utils/array_types.h>
+#include <utils/array.h>
 #include <utils/utils.h>
 
 VkSurfaceFormatKHR

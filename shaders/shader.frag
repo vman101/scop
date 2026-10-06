@@ -1,11 +1,7 @@
 #version 460
 
 struct Material {
-    vec3 ambient;             float specular_exponent;
-    vec3 diffuse;             float dissolve;
-    vec3 specular;            float optical_density;
-    vec3 transmission_filter; float transparent;
-    uint illum;
+    vec4 base_color;
 };
 
 layout(std430, set = 0, binding = 0) readonly buffer Materials {
@@ -55,14 +51,14 @@ void main() {
     float g = 0.3 + 0.5 * fract(float(face_id) * 0.618);
     vec3 face_color = vec3(g);
 
-    vec3 tex_color = m.diffuse * pow(sample_tex(v_uv).rgb, vec3(2.2));
+    vec3 tex_color = m.base_color.rgb;
     vec3 albedo    = mix(face_color, tex_color, pc.tex_mix);
     vec3 color     = albedo * (AMBIENT_LIGHT + ndl * LIGHT_COLOR);
 
-    if (m.illum >= 2u && ndl > 0.0) {
-        float shininess = m.specular_exponent > 0.0 ? m.specular_exponent : 32.0;
-        color += m.specular * pow(max(dot(N, H), 0.0), shininess) * LIGHT_COLOR;
-    }
+    // if (m.illum >= 2u && ndl > 0.0) {
+    //     float shininess = m.specular_exponent > 0.0 ? m.specular_exponent : 32.0;
+    //     color += m.specular * pow(max(dot(N, H), 0.0), shininess) * LIGHT_COLOR;
+    // }
 
-    outColor = vec4(color, m.dissolve);
+    outColor = vec4(color, 1.0);
 }

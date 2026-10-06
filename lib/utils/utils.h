@@ -2,10 +2,16 @@
 
 #include <interface/mage_result.h>
 #include <stdint.h>
-#include "da.h"
-#include "array_types.h"
+#include "array.h"
 
 #define ARRAY_LEN(a) ((sizeof (a)) / (sizeof (*(a))))
+
+typedef struct {
+    uint32_t    start;
+    uint32_t    count;
+} Range;
+
+DECLARE_ARRAY(Range);
 
 void        *alloc(uint32_t size);
 Result      read_file(const char *filename, const char *flags, Array(uint8_t) *da);

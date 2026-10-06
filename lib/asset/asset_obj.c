@@ -1,7 +1,7 @@
 #include "interface/mage_result.h"
 #include "utils/da.h"
 #include "utils/sv.h"
-#include <utils/array_types.h>
+#include <utils/array.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,7 +31,7 @@ const char *entry_types_nm[] = {
 };
 
 void
-asset_obj_destroy(AssetObjData *obj) {
+asset_obj_destroy(AssetObj *obj) {
     if (!obj) return;
     tda_destroy(&obj->positions);
     tda_destroy(&obj->indices);
@@ -65,17 +65,21 @@ asset_obj_parse_face_field(StringView field, AssetParseDebugTracker *tracker, As
 }
 
 static void
-asset_obj_group_close(AssetObjData *o) {
+asset_obj_group_close(AssetObj *o) {
     AssetObjGroup *last = tda_back(&o->groups);
     if (last) {
-        last->count = tda_size(&o->indices) - last->index_start;
+        last->range.count = tda_size(&o->indices) - last->range.start;
     }
 }
 
 Result
-asset_obj_parse_face(StringView line, AssetParseDebugTracker *tracker, AssetObjData *o) {
+asset_obj_parse_face(StringView line, AssetParseDebugTracker *tracker, AssetObj *o) {
     AssetObjIndex verts[64];
     size_t n = 0;
+    Range  face_range = {
+        .start = tda_size(&o->indices),
+        .count = 0,
+    };
 
     while (line.len) {
         StringView field = sv_trim_left(sv_chop(&line, ' '));
@@ -84,27 +88,27 @@ asset_obj_parse_face(StringView line, AssetParseDebugTracker *tracker, AssetObjD
         TRY(asset_obj_parse_face_field(field, tracker, &verts[n++]));
     }
     if (n < 3) return RESULT_ERR_PARSE_EXPECT;
-
-    for (size_t i = 1; i + 1 < n; i++) {
-        tda_push(&o->indices, &verts[0]);
-        tda_push(&o->indices, &verts[i]);
-        tda_push(&o->indices, &verts[i + 1]);
+    face_range.count = n;
+    for (size_t i = 0; i < ARRAY_LEN(verts); i++) {
+        TRY(tda_push(&o->indices, &verts[i]));
     }
+    TRY(tda_push(&o->faces, &face_range));
     return RESULT_OK;
 }
 
 Result
-asset_obj_parse_group(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
+asset_obj_parse_group(StringView line, AssetParseDebugTracker *tracker, AssetObj *obj) {
     asset_obj_group_close(obj);
     AssetObjGroup new = {0};
     TRY(asset_parse_string(line, tracker, new.name));
-    new.index_start = tda_size(&obj->indices);
-    new.index_start = 0;
+    new.range.start = tda_size(&obj->indices);
+    new.range.count = 0;
+    TRY(tda_push(&obj->groups, &new));
     return RESULT_OK;
 }
 
 Result
-asset_obj_parse_mtllib(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
+asset_obj_parse_mtllib(StringView line, AssetParseDebugTracker *tracker, AssetObj *obj) {
     const char *start = line.data;
     while (!sv_empty(&line)) {
         StringView mtl = sv_trim_left(sv_chop(&line, ' '));
@@ -118,30 +122,34 @@ asset_obj_parse_mtllib(StringView line, AssetParseDebugTracker *tracker, AssetOb
 }
 
 Result
-asset_obj_parse_use_mtl(StringView line, AssetParseDebugTracker *tracker, AssetObjData *obj) {
+asset_obj_parse_use_mtl(StringView line, AssetParseDebugTracker *tracker, AssetObj *obj) {
     char mtl_name[64] = {0};
     StringView tok = sv_trim_left(sv_chop(&line, ' '));
     asset_debug_parser_tracker_cursor_advance(tracker, line.data - tok.data);
     sv_strcopy(tok, mtl_name);
     AssetObjUseMtl *mtl = tda_back(&obj->use_mtl);
     if (mtl) {
-        mtl->count = tda_size(&obj->indices) - mtl->index_start;
+        mtl->range.count = tda_size(&obj->indices) - mtl->range.start;
     }
 
     AssetObjUseMtl new_use = {
-        .index_start = tda_size(&obj->indices),
+        .range = {
+            .start = tda_size(&obj->indices),
+            .count = 0,
+        }
     };
+    sv_strcopy(tok, new_use.name);
     TRY(tda_push(&obj->use_mtl, &new_use));
 
     return RESULT_OK;
 }
 
 Result
-asset_obj_file_parse(const Array(char) *content, AssetParseDebugTracker *tracker, AssetObjData *out) {
+asset_obj_data_parse(const Array(char) *content, AssetParseDebugTracker *tracker, AssetObj *out) {
     Result        r     = RESULT_OK;
     StringView    file  = { tda_data(content), tda_size(content) };
     AssetObjGroup group = {0};
-    group.index_start   = 0;
+    group.range.start   = 0;
     tda_push(&out->groups, &group);
 
     while (file.len) {
@@ -186,12 +194,12 @@ asset_obj_file_parse(const Array(char) *content, AssetParseDebugTracker *tracker
 fail:
     {
         AssetObjUseMtl *back = tda_back(&out->use_mtl);
-        if (back && back->index_start < tda_size(&out->indices) && back->count == 0) {
-            back->count = tda_size(&out->indices) - back->index_start;
+        if (back && back->range.start < tda_size(&out->indices) && back->range.count == 0) {
+            back->range.count = tda_size(&out->indices) - back->range.start;
         }
         for (size_t i = 0; i < tda_size(&out->groups); i++) {
             AssetObjGroup *cur = tda_get(&out->groups, i);
-            if (cur && cur->index_start == 0) {
+            if (cur && cur->range.count == 0) {
                 tda_remove(&out->groups, i);
             }
         }

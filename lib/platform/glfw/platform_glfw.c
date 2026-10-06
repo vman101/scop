@@ -1,6 +1,6 @@
-#include <stdint.h>
-#include <string.h>
 #define GLFW_INCLUDE_VULKAN
+
+#include <stdint.h>
 #include <GLFW/glfw3.h>
 #include "utils/utils.h"
 #include <interface/mage_native_window.h>
@@ -23,8 +23,6 @@ struct PlatformWindow_T {
     PlatformWindowResizeCallbackFunc    resize_func;
     void                                *user_data;
     bool                                should_close;
-    bool                                keys_prev[PLATFORM_KEY_COUNT];
-    bool                                keys_now[PLATFORM_KEY_COUNT];
 };
 
 static void
@@ -53,8 +51,6 @@ platform_window_should_close_set(PlatformWindow window, bool should_close) {
 
 void
 platform_event_poll(PlatformWindow window) {
-    memcpy(window->keys_prev, window->keys_now, sizeof(window->keys_prev));
-    memset(window->keys_now, 0, sizeof(window->keys_now));
     (void)window;
     glfwPollEvents();
 }
@@ -208,14 +204,7 @@ platform_key_is_pressed(PlatformWindow window, int key) {
     if (key > PLATFORM_KEY_COUNT) { return false; }
     int glfw_key = platform_key_to_glfw(key);
     bool pressed = glfwGetKey(window->handle, glfw_key) == GLFW_PRESS;
-    window->keys_now[key] = pressed;
     return pressed;
-}
-
-bool
-platform_key_was_pressed(PlatformWindow window, int key) {
-    bool pressed = platform_key_is_pressed(window, key);
-    return pressed && !window->keys_prev[key];
 }
 
 Result

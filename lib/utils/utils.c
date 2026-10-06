@@ -4,7 +4,20 @@
 #include <stdio.h>
 #include <string.h>
 #include "interface/mage_result.h"
-#include "array_types.h"
+#include "array.h"
+
+const char *result_str(Result r) {
+    static const char *names[] = {
+#define X(name) #name,
+        RESULT_LIST(X)
+#undef X
+    };
+    return (r >= 0 && r < RESULT_COUNT) ? names[r] : "RESULT_UNKNOWN";
+}
+
+void print_err_with_location(Result r, const char *call, const char *file, const int line) {
+    fprintf(stderr, "  %s failed (%s)\n    at %s:%d\n", call, result_str(r), file, line);
+}
 
 int32_t clamp(int32_t n, int32_t min, int32_t max) {
     if (n < min) {

@@ -2,22 +2,24 @@
 
 #define MESH
 
-#include "asset/asset.h"
 #include "interface/mage_gfx.h"
 #include "interface/mage_math.h"
 #include "interface/mage_result.h"
-#include "utils/da.h"
+#include "utils/array.h"
+#include "geometry/geometry.h"
+#include "utils/utils.h"
 
-typedef struct MeshAxisBoundingBox MeshAxisBoundingBox;
 typedef struct MeshBufferRange     MeshBufferRange;
+typedef struct SubMeshDesc         SubMeshDesc;
 typedef struct MeshGroup           MeshGroup;
 typedef struct SubMesh             SubMesh;
 typedef struct Mesh                Mesh;
 typedef struct Vertex              Vertex;
 
+DECLARE_ARRAY(Vertex);
 DECLARE_ARRAY(MeshGroup);
 DECLARE_ARRAY(SubMesh);
-DECLARE_ARRAY(Vertex);
+DECLARE_ARRAY(SubMeshDesc);
 
 struct       Vertex {
     Vec3     pos;
@@ -26,20 +28,22 @@ struct       Vertex {
     uint32_t face_id;
 };
 
-struct MeshAxisBoundingBox {
-    Vec3    min;
-    Vec3    max;
-};
-
 struct SubMesh {
-    uint32_t       mtl;
-    GfxBufferRange range;
+    uint32_t mtl;
+    Range    range;
 };
 
 struct MeshGroup {
-    char           name[64];
-    GfxBufferRange range;
+    char  name[64];
+    Range range;
 };
+
+typedef struct {
+    Array(uint32_t)  indices;
+    Array(Vertex)    vertices;
+    Array(SubMesh)   submeshes;
+    Array(MeshGroup) groups;
+} MeshDesc;
 
 struct Mesh {
     char                name[64];
@@ -47,14 +51,11 @@ struct Mesh {
     GfxBuffer           index_buf;
     Array(SubMesh)      submeshes;
     Array(MeshGroup)    groups;
-    Vec3                position;
-    Vec3                up;
-    Mat4                transform;
-    MeshAxisBoundingBox bounding_box;
+    GeometryBoundingBox bounding_box;
 };
 
-MESH Result              mesh_create(GfxDevice dev, AssetObjData *obj, Array(AssetMtlLib) *lib, Mesh *out);
+MESH Result              mesh_create(GfxDevice dev, MeshDesc *desc, Mesh *out);
 MESH void                mesh_destroy(GfxDevice dev, Mesh *mesh);
 MESH void                mesh_draw(GfxFrame f, Mesh *mesh, GfxPushConstantDesc *p);
-MESH MeshAxisBoundingBox mesh_boundry_box_find(const Vec3 *vertices, size_t vertices_count);
-MESH Vec3                mesh_center_get(Mesh *mesh);
+
+#undef MESH

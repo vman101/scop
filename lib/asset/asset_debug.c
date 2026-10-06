@@ -1,4 +1,5 @@
 #include "asset.h"
+#include "utils/assert.h"
 #include "utils/da.h"
 
 void
@@ -50,8 +51,9 @@ asset_debug_print_uint32_t(const char *title, uint32_t u) {
 }
 
 void
-asset_debug_print_mtl(const char *name, Material *mtl) {
-    printf("mtl %s\n", name);
+asset_debug_print_mtl(AssetMtl *mtl) {
+    ASSERT(mtl, "mtl is null");
+    printf("mtl %s\n", mtl->name);
     asset_debug_print_vector3("Ka", mtl->ambient);
     asset_debug_print_vector3("Kd", mtl->diffuse);
     asset_debug_print_vector3("Ks", mtl->specular);
@@ -64,7 +66,7 @@ asset_debug_print_mtl(const char *name, Material *mtl) {
 }
 
 void
-asset_debug_print_obj_data(const char *name, AssetObjData *obj) {
+asset_debug_print_obj_data(const char *name, AssetObj *obj) {
     printf("obj %s\n",                       name);
     printf("  Positions (v)  count: %zu\n", tda_size(&obj->positions));
     printf("  Normals   (vn) count: %zu\n",  tda_size(&obj->normals));
@@ -82,4 +84,9 @@ asset_debug_print_invalid_token(const char *filename, AssetParseDebugTracker *tr
     if (filename && tracker) {
         printf("  at %s\t%u:%u\n", filename, tracker->line, tracker->cursor);
     }
+}
+
+void
+asset_debug_print_tracker(const char *filepath, AssetParseDebugTracker tracker) {
+    fprintf(stderr, "Error while parsing file %s at %u:%u\n", filepath, tracker.line, tracker.cursor);
 }

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
-#include <utils/array_types.h>
+#include <utils/array.h>
 
 DECLARE_ARRAY(VkFramebuffer);
 DECLARE_ARRAY(VkImageView);

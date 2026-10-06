@@ -6,7 +6,6 @@
 #include <utils/allocators.h>
 #include <vulkan/vulkan_core.h>
 #include "interface/mage_native_window.h"
-#include "utils/da.h"
 #include "vk/vk.h"
 
 #define GPU_POOL_GPU_BLOCK_SIZE (512ULL * 1024 * 1024)

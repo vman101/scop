@@ -1,12 +1,12 @@
 #pragma once
 
-#include <utils/array_types.h>
+#include <utils/array.h>
 #include <stdint.h>
 #include "stdbool.h"
 #include <interface/mage_math.h>
 #include <utils/sv.h>
-#include "utils/da.h"
 #include "limits.h"
+#include "utils/utils.h"
 
 #define ASSET_MTL
 #define ASSET_OBJ
@@ -14,13 +14,12 @@
 #define ASSET_UTL
 #define ASSET_DBG
 
-
 typedef struct AssetMtl       AssetMtl;
 typedef struct AssetMtlLib    AssetMtlLib;
-typedef struct Material       Material;
 typedef struct AssetObjMtlLib AssetObjMtlLib;
-typedef struct AssetObjData   AssetObjData;
+typedef struct AssetObj       AssetObj;
 typedef struct AssetObjIndex  AssetObjIndex;
+typedef struct AssetObjFace   AssetObjFace;
 typedef struct AssetObjUseMtl AssetObjUseMtl;
 typedef struct AssetObjGroup  AssetObjGroup;
 typedef struct AssetImage     AssetImage;
@@ -31,18 +30,16 @@ struct AssetImage {
     uint32_t *px;
 };
 
-DECLARE_ARRAY(Vec2);
-DECLARE_ARRAY(Vec3);
 DECLARE_ARRAY(AssetObjIndex);
 DECLARE_ARRAY(AssetObjUseMtl);
 DECLARE_ARRAY(AssetObjGroup);
 DECLARE_ARRAY(AssetMtl);
-DECLARE_ARRAY(Material);
 DECLARE_ARRAY(AssetObjMtlLib);
 DECLARE_ARRAY(AssetMtlLib);
 
 #define ASSET_OBJ_NO_VALUE (INT_MAX)
 #define ASSET_DEFAULT_MATERIAL_INDEX 0
+#define ASSET_OBJ_FACE_MAX_CORNERS 64
 
 #define ASSET_OBJ_ENTRY_LIST \
     X(ASSET_OBJ_ENTRY_TYPE_V,       "v") \
@@ -88,18 +85,18 @@ typedef enum {
     ASSET_MTL_ENTRY_COUNT,
 } AssetMtlEntryType;
 
-struct Material {
-    Vec3     ambient;             float specular_exponent;
-    Vec3     diffuse;             float dissolve;
-    Vec3     specular;            float optical_density;
-    Vec3     transmission_filter; float transparent;
-    uint32_t illum;
-    uint32_t _pad[3];
-};
-
-struct              AssetMtl {
-    char            name[64];
-    Material        mtl;
+struct AssetMtl {
+  char     name[64];
+  Vec3     ambient;
+  Vec3     diffuse;
+  Vec3     specular;
+  Vec3     transmission_filter;
+  float    specular_exponent;
+  float    dissolve;
+  float    optical_density;
+  float    transparent;
+  uint32_t illum;
+  uint32_t _pad[3];
 };
 
 struct              AssetMtlLib  {
@@ -120,8 +117,7 @@ typedef struct { uint32_t cursor; uint32_t line; } AssetParseDebugTracker;
 
 struct                    AssetObjGroup {
     char                  name[64];
-    uint32_t              index_start;
-    uint32_t              count;
+    Range                 range;
 };
 
 struct                    AssetObjIndex {
@@ -133,27 +129,27 @@ struct                    AssetObjIndex {
 
 struct                    AssetObjUseMtl {
     char                  name[64];
-    uint32_t              index_start;
-    uint32_t              count;
+    Range                 range;
 };
 
-struct                    AssetObjData {
+struct                    AssetObj {
     Array(Vec3)           positions;
     Array(Vec2)           tex_coords;
     Array(Vec3)           normals;
     Array(AssetObjIndex)  indices;
+    Array(Range)          faces;
     Array(AssetObjUseMtl) use_mtl;
     Array(AssetObjMtlLib) mtl_lib;
     Array(AssetObjGroup)  groups;
     Array(AssetMtl)       materials;
 };
 
-ASSET_OBJ void     asset_obj_destroy(AssetObjData *obj);
-ASSET_OBJ Result   asset_obj_file_parse(const Array(char) *content, AssetParseDebugTracker *tracker, AssetObjData *out);
+ASSET_OBJ Result   asset_obj_data_parse(const Array(char) *content, AssetParseDebugTracker *tracker, AssetObj *out);
+ASSET_OBJ void     asset_obj_destroy(AssetObj *obj);
 
-ASSET_MTL void     asset_mtl_destroy(AssetMtlLib *lib);
-ASSET_MTL Result   asset_mtl_file_parse(const Array(char) *content, AssetParseDebugTracker *tracker, Array(AssetMtl) *out);
-ASSET_MTL Material asset_mtl_material_default(void);
+ASSET_MTL Result   asset_mtl_data_parse(const Array(char) *content, AssetParseDebugTracker *tracker, Array(AssetMtl) *out);
+ASSET_MTL void     asset_mtl_lib_destroy(AssetMtlLib *lib);
+ASSET_MTL AssetMtl asset_mtl_material_default(void);
 
 ASSET_IMG Result   asset_image_parse_ppm(Array(uint8_t) *content, AssetImage *out);
 
@@ -168,11 +164,12 @@ ASSET_UTL Result   asset_parse_vec3_into_arr(StringView line, AssetParseDebugTra
 
 ASSET_DBG void     asset_debug_print_index_arr(const char *title, Array(AssetObjIndex) *indices);
 ASSET_DBG void     asset_debug_print_vec3_arr(const char *title, Array(Vec3) *position);
-ASSET_DBG void     asset_debug_print_mtl(const char *name, Material *mtl);
-ASSET_DBG void     asset_debug_print_obj_data(const char *name, AssetObjData *obj);
+ASSET_DBG void     asset_debug_print_mtl(AssetMtl *mtl);
+ASSET_DBG void     asset_debug_print_obj_data(const char *name, AssetObj *obj);
 ASSET_DBG void     asset_debug_print_vector3(const char *title, Vec3 vec);
 ASSET_DBG void     asset_debug_print_float(const char *title, float f);
 ASSET_DBG void     asset_debug_print_invalid_token(const char *filename, AssetParseDebugTracker *tracker, StringView token, int type, const char**entry_names);
+ASSET_DBG void     asset_debug_print_tracker(const char *filepath, AssetParseDebugTracker tracker);
 ASSET_DBG void     asset_debug_parser_tracker_line_advance(AssetParseDebugTracker *tracker, int32_t adv);
 ASSET_DBG void     asset_debug_parser_tracker_cursor_advance(AssetParseDebugTracker *tracker, ptrdiff_t adv);
 

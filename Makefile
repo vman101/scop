@@ -21,6 +21,10 @@ VK             := validation_layers.c logical_device.c \
 					render_pass.c shader.c command.c \
 					sync.c framebuffer.c buffer.c
 MESH           := mesh.c
+MODEL          := model.c
+MATERIAL       := material.c
+GEOMETRY       := geometry.c
+LOADER         := loader.c
 
 PLATFORM_GLFW  := platform_glfw.c
 PLATFORM_LINUX := platform_linux.c
@@ -35,14 +39,18 @@ GFX_VULKAN     := gfx_vulkan.c $(addprefix gfx_vulkan_, \
 LIB_SRC        := $(addprefix $(LIB_DIR)utils/, $(UTILS)) \
 					$(addprefix $(LIB_DIR)asset/, $(ASSET)) \
 					$(addprefix $(LIB_DIR)mesh/, $(MESH)) \
+					$(addprefix $(LIB_DIR)model/, $(MODEL)) \
+					$(addprefix $(LIB_DIR)material/, $(MATERIAL)) \
+					$(addprefix $(LIB_DIR)geometry/, $(GEOMETRY)) \
+					$(addprefix $(LIB_DIR)loader/, $(LOADER)) \
 					$(addprefix $(LIB_DIR)platform/glfw/, $(PLATFORM_GLFW)) \
 					$(addprefix $(LIB_DIR)platform/linux/, $(PLATFORM_LINUX)) \
 					$(addprefix $(LIB_DIR)gfx/vulkan/, $(GFX_VULKAN)) \
 					$(addprefix $(LIB_DIR)gfx/vulkan/vk/, $(VK))
 
-APP_SRC        := $(addprefix $(SRCDIR), main.c)
+APP_SRC        := $(addprefix $(SRCDIR), main.c scop.c)
 ifeq ($(TARGET), scop-san)
-ASAN_SRC	   := lib/utils/san_nodlclose.c
+ASAN_SRC       := lib/utils/san_nodlclose.c
 endif
 
 OBJDIR         := obj/

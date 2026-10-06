@@ -23,14 +23,14 @@ const AssetMtlEntryType asset_mtl_entry_type_ls[] = {
 };
 
 void
-asset_mtl_destroy(AssetMtlLib *lib) {
+asset_mtl_lib_destroy(AssetMtlLib *lib) {
     if (!lib) { return ; }
     tda_destroy(&lib->mtls);
 }
 
-Material
+AssetMtl
 asset_mtl_material_default(void) {
-    Material m = {0};
+    AssetMtl m = {0};
     m.diffuse = vec3(0.8F, 0.8F, 0.8F);
     m.specular = vec3(0.8F, 0.8F, 0.8F);
     m.dissolve = 1;
@@ -48,7 +48,7 @@ int asset_entry_type_get(StringView s, const StringView entries_sv[], const int 
 }
 
 Result
-asset_mtl_file_parse(const Array(char) *content, AssetParseDebugTracker *tracker, Array(AssetMtl) *out) {
+asset_mtl_data_parse(const Array(char) *content, AssetParseDebugTracker *tracker, Array(AssetMtl) *out) {
     StringView file     = { tda_data(content), tda_size(content) };
     Result r            = RESULT_OK;
     AssetMtl *target    = NULL;
@@ -68,28 +68,28 @@ asset_mtl_file_parse(const Array(char) *content, AssetParseDebugTracker *tracker
         AssetMtl new = {0};
         switch (type) {
             case ASSET_MTL_ENTRY_KA:
-                TRY_GOTO(r, fail, asset_parse_vec3(line, tracker, &target->mtl.ambient));
+                TRY_GOTO(r, fail, asset_parse_vec3(line, tracker, &target->ambient));
                 break;
             case ASSET_MTL_ENTRY_KD:
-                TRY_GOTO(r, fail, asset_parse_vec3(line, tracker, &target->mtl.diffuse));
+                TRY_GOTO(r, fail, asset_parse_vec3(line, tracker, &target->diffuse));
                 break;
             case ASSET_MTL_ENTRY_KS:
-                TRY_GOTO(r, fail, asset_parse_vec3(line, tracker, &target->mtl.specular));
+                TRY_GOTO(r, fail, asset_parse_vec3(line, tracker, &target->specular));
                 break;
             case ASSET_MTL_ENTRY_NS:
-                TRY_GOTO(r, fail, asset_parse_float(line, tracker, &target->mtl.specular_exponent));
+                TRY_GOTO(r, fail, asset_parse_float(line, tracker, &target->specular_exponent));
                 break;
             case ASSET_MTL_ENTRY_D:
-                TRY_GOTO(r, fail, asset_parse_float(line, tracker, &target->mtl.dissolve));
+                TRY_GOTO(r, fail, asset_parse_float(line, tracker, &target->dissolve));
                 break;
             case ASSET_MTL_ENTRY_TR:
-                TRY_GOTO(r, fail, asset_parse_float(line, tracker, &target->mtl.transparent));
+                TRY_GOTO(r, fail, asset_parse_float(line, tracker, &target->transparent));
                 break;
             case ASSET_MTL_ENTRY_TF:
-                TRY_GOTO(r, fail, asset_parse_vec3(line, tracker, &target->mtl.transmission_filter));
+                TRY_GOTO(r, fail, asset_parse_vec3(line, tracker, &target->transmission_filter));
                 break;
             case ASSET_MTL_ENTRY_NI:
-                TRY_GOTO(r, fail, asset_parse_float(line, tracker, &target->mtl.optical_density));
+                TRY_GOTO(r, fail, asset_parse_float(line, tracker, &target->optical_density));
                 break;
             case ASSET_MTL_ENTRY_NEWMTL:
                 TRY_GOTO(r, fail, tda_push(&asset_mtl, &new));
@@ -97,7 +97,7 @@ asset_mtl_file_parse(const Array(char) *content, AssetParseDebugTracker *tracker
                 TRY_GOTO(r, fail, asset_parse_string(line, tracker, (char *)&target->name));
                 break;
             case ASSET_MTL_ENTRY_ILLUM:
-                TRY_GOTO(r, fail, asset_parse_uint32_t(line, tracker, &target->mtl.illum));
+                TRY_GOTO(r, fail, asset_parse_uint32_t(line, tracker, &target->illum));
                 break;
             case ASSET_MTL_ENTRY_COMMENT:
             case ASSET_MTL_ENTRY_COUNT:

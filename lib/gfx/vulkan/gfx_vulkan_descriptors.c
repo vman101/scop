@@ -4,7 +4,6 @@
 #include <vulkan/vulkan_core.h>
 #include "gfx_vulkan_internal.h"
 #include "utils/utils.h"
-#include <stdio.h>
 
 Result
 gfx_vulkan_descriptor_layout_init(GfxDevice dev) {

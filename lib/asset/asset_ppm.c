@@ -1,6 +1,6 @@
 #include "asset.h"
 #include "interface/mage_result.h"
-#include "utils/array_types.h"
+#include "utils/array.h"
 #include "utils/utils.h"
 #include <stdint.h>
 

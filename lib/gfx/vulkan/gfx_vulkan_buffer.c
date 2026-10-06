@@ -30,7 +30,8 @@ gfx_buffer_destroy(GfxDevice dev, GfxBuffer buf) {
 
 Result
 gfx_buffer_create(GfxDevice dev, GfxBufferDesc *desc, GfxBuffer *out) {
-    vkDeviceWaitIdle(dev->ctx.logical_device);
+    VK_TRY(vkDeviceWaitIdle(dev->ctx.logical_device));
+
     Result r = RESULT_OK;
     uint64_t    buffer_bytes_size = desc->count * desc->member_size;
     if (buffer_bytes_size == 0) {
